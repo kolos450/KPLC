@@ -47,14 +47,4 @@
 #define MCP2515_CS                              B, 2
 #define MCP2515_INT                             D, 2
 
-// -----------------------------------------------------------------------------
-// Setting for AT90CAN
-
-// Number of CAN messages which are buffered in RAM additinally to the MObs
-#define CAN_RX_BUFFER_SIZE              16
-#define CAN_TX_BUFFER_SIZE              8
-
-// only available if CAN_TX_BUFFER_SIZE > 0
-#define CAN_FORCE_TX_ORDER              1
-
 #endif  // CAN_CONFIG_H

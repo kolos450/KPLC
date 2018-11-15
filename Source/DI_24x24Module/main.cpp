@@ -4,6 +4,9 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include "common.h"
+#include "Arduino/SPI.h"
+#include "MCP23S17.h"
+#include "MCP23S17_config.h"
 
 #include "uavcan/kplc/IOState.h"
 #include "uavcan/protocol/GetNodeInfo.h"
@@ -12,58 +15,18 @@
 #include "uavcan/protocol/param/GetSet.h"
 
 #define MAIN_MODULE_NODE_ID 100
+#define IOSTATE_MIN_TRANSMIT_INTERVAL_MSEC 500
 
 static uint32_t g_mainModuleLastStatusUpdateTime = 0;
 
 CanardInstance g_canard;              // The canard library instance.
 uint8_t g_canard_memory_pool[1024];   // Arena for memory allocation, used by the library.
 
+static uint16_t g_ioStateA = 0, g_ioStateB = 0;
+
 Timer<4> g_timers;
 
-static int8_t handle_KPLC_IOState_Request(CanardRxTransfer* transfer)
-{
-	if (transfer->source_node_id != MAIN_MODULE_NODE_ID) {
-		return 0;
-	}
-	
-	uavcan_kplc_IOStateRequest request;
-	int8_t ret;
-	uint8_t responseStatus = UAVCAN_KPLC_IOSTATE_STATUS_OK;
-	ret = uavcan_kplc_IOStateRequest_decode(transfer, transfer->payload_len, &request, NULL);
-	if (ret < 0) {
-		responseStatus = UAVCAN_KPLC_IOSTATE_STATUS_ERROR_UNKNOWN;
-		ret = -FailureReason_CannotDecodeMessage;
-	}
-	else {
-		// TODO: accept request
-	}
-	
-	uint8_t buffer[UAVCAN_KPLC_IOSTATE_RESPONSE_MAX_SIZE];
-	memset(buffer, 0, sizeof(buffer));
-	uavcan_kplc_IOStateResponse response = {
-		.status = responseStatus
-	};
-	uint16_t len = uavcan_kplc_IOStateResponse_encode(&response, &buffer[0]);
-	int16_t ret_int16 = canardRequestOrRespond(&g_canard,
-		transfer->source_node_id,
-		UAVCAN_KPLC_IOSTATE_SIGNATURE,
-		UAVCAN_KPLC_IOSTATE_ID,
-		&transfer->transfer_id,
-		transfer->priority,
-		CanardResponse,
-		&buffer[0],
-		(uint16_t)len);
-	
-	if (ret < 0) {
-		return ret;
-	}
-	
-	if (ret_int16 < 0) {
-		return (int8_t)ret_int16;
-	}
-	
-	return 0;
-}
+int8_t ProcessIOState(bool forced = false);
 
 static int8_t handle_KPLC_IOState_Response(CanardRxTransfer* transfer)
 {
@@ -200,9 +163,6 @@ void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer)
 				case UAVCAN_PROTOCOL_GETNODEINFO_ID:
 					handler = handle_protocol_GetNodeInfo;
 					break;
-				case UAVCAN_KPLC_IOSTATE_ID:
-					handler = handle_KPLC_IOState_Request;
-					break;
 				case UAVCAN_PROTOCOL_PARAM_GETSET_ID:
 					handler = handle_protocol_param_GetSet;
 					break;
@@ -243,8 +203,71 @@ int8_t ValidateMasterNodeState()
 {
 	uint32_t now = millis();
 	
-	if ((now - g_mainModuleLastStatusUpdateTime) > 2 * CANARD_NODESTATUS_PERIOD) {
+	if ((now - g_mainModuleLastStatusUpdateTime) > 2 * CANARD_NODESTATUS_PERIOD_MSEC) {
 		return -FailureReason_MasterStateValidationError;
+	}
+	
+	return 0;
+}
+
+void ProcessIOStateTimerCallback(uint8_t _)
+{
+	if (g_nodeState == NodeState_Operational)
+	{
+		ProcessIOState(true);
+	}
+}
+
+int8_t setupMCP23S17()
+{
+	MCP23S17_A.begin();
+	MCP23S17_A.gpioPinMode(INPUT);
+	MCP23S17_A.portPullup(HIGH);
+	
+	MCP23S17_B.begin();
+	MCP23S17_B.gpioPinMode(INPUT);
+	MCP23S17_B.portPullup(HIGH);
+	
+	int8_t result = g_timers.every(IOSTATE_MIN_TRANSMIT_INTERVAL_MSEC, ProcessIOStateTimerCallback);
+	if (result < 0) {
+		return -FailureReason_CannotInit;
+	}
+	
+	return 0;
+}
+
+int8_t ProcessIOState(bool forced)
+{
+	uint16_t a = MCP23S17_A.readGpioPort();
+	uint16_t b = MCP23S17_B.readGpioPort();
+	
+	if (forced || a != g_ioStateA || b != g_ioStateB)
+	{
+		uint8_t buffer[UAVCAN_KPLC_IOSTATE_REQUEST_MAX_SIZE];
+		static uint8_t transfer_id = 0;
+		
+		uavcan_kplc_IOStateRequest request;
+		request.state[0] = (byte)a;
+		request.state[1] = (byte)(a >> 8);
+		request.state[2] = (byte)b;
+		request.state_inv[0] = ~request.state[0];
+		request.state_inv[1] = ~request.state[1];
+		request.state_inv[2] = ~request.state[2];
+		uint16_t len = uavcan_kplc_IOStateRequest_encode(&request, &buffer[0]);
+		
+		int16_t result = canardRequestOrRespond(&g_canard,
+			MAIN_MODULE_NODE_ID,
+			UAVCAN_KPLC_IOSTATE_SIGNATURE,
+			UAVCAN_KPLC_IOSTATE_ID,
+			&transfer_id,
+			CANARD_TRANSFER_PRIORITY_MEDIUM,
+			CanardRequest,
+			&buffer[0],
+			(uint16_t)len);
+		
+		if (result < 0) {
+			return (int8_t)result;
+		}
 	}
 	
 	return 0;
@@ -252,7 +275,21 @@ int8_t ValidateMasterNodeState()
 
 int main(void)
 {
+	DDRD |= _BV(PORTD6); // LED
+	DDRB |= _BV(PORTB1); // MCP2515 Reset
+	
+	PORTB |= _BV(PORTB1);
+	PORTC |= _BV(PORTC5);
+	PORTC |= _BV(PORTD0) | _BV(PORTD1) | _BV(PORTD3) | _BV(PORTD4);
+	PORTE |= _BV(PORTE0);
+	
 	int8_t result;
+	
+	result = setupMCP23S17();
+	if (result < 0) {
+		fail(result);
+	}
+	
 	result = setup();
 	if (result < 0) {
 		fail(result);
@@ -291,6 +328,12 @@ int main(void)
 				g_timers.update();
 				
 				result = ValidateMasterNodeState();
+				if (result < 0) {
+					fail(result);
+					continue;
+				}
+				
+				result = ProcessIOState();
 				if (result < 0) {
 					fail(result);
 					continue;
