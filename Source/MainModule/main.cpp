@@ -218,7 +218,7 @@ int8_t ValidateSlavesState()
 	uint32_t now = millis();
 	
 	for (uint8_t i = 0; i < PLC_SLAVE_NODES_LEN; i++) {
-		if ((now - g_plcSlaveNodeState[i].LastStatusUpdateTime) > 2 * CANARD_NODESTATUS_PERIOD) {
+		if ((now - g_plcSlaveNodeState[i].LastStatusUpdateTime) > 2 * CANARD_NODESTATUS_PERIOD_MSEC) {
 			return -FailureReason_SlavesStateValidationError;
 		}
 	}
@@ -307,6 +307,11 @@ int8_t UpdateSlavesIOState()
 
 int main(void)
 {
+	DDRD |= _BV(PORTD5) | _BV(PORTD6) | _BV(PORTD7); // LEDs
+	DDRC |= _BV(PORTC3) | _BV(PORTC4); // MCP2515s Reset
+	
+	PORTC |= _BV(PORTC3);
+	
 	int8_t result;
 	result = setup();
 	if (result < 0) {

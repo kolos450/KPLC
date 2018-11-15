@@ -20,6 +20,42 @@ uint8_t g_canard_memory_pool[1024];   // Arena for memory allocation, used by th
 
 Timer<4> g_timers;
 
+static int8_t ValidateIOStateRequest(uavcan_kplc_IOStateRequest request)
+{
+	for (uint8_t i = 0; i < ARRAY_SIZE(request.state); i++)
+	{
+		uint8_t val = request.state[i];
+		uint8_t inv = ~val;
+		if (inv != request.state_inv[i])
+			return -FailureReason_CannotDecodeMessage;
+	}
+	
+	return 0;
+}
+
+//  0   PA6    4   PC7      8  PC5     12  PD6     16  PD2
+//  1   PA5    5   PA7      9  PC0     13  PD7     17  PD3
+//  2   PA4	   6   PC3     10  PC1     14  PD4     18  PD0
+//  3   PC6	   7   PC4     11  PC2     15  PD5     19  PD1
+static void ApplyIOState(uint8_t* state)
+{
+	PORTA = (PORTA & 0xF) |
+			((state[0] << (4 - 2)) & _BV(5)) |
+			((state[0] << (5 - 1)) & _BV(6)) |
+			((state[0] << (6 - 0)) & _BV(6)) |
+			((state[0] << (7 - 5)) & _BV(7));
+			
+	PORTC = ((state[1] >> 1) & (_BV(0) | _BV(1) | _BV(2))) |
+			((state[0] >> 3) & (_BV(3) | _BV(4))) |
+			((state[1] << 5) & _BV(5)) |
+			((state[0] << (6 - 3)) & (_BV(6) | _BV(7)));
+			
+	PORTD = ((state[2] >> 2) & (_BV(0) | _BV(1))) |
+			((state[2] << 2) & (_BV(2) | _BV(3))) |
+			((state[1] >> 2) & (_BV(4) | _BV(5))) |
+			((state[1] << 2) & (_BV(6) | _BV(7)));
+}
+
 static int8_t handle_KPLC_IOState_Request(CanardRxTransfer* transfer)
 {
 	if (transfer->source_node_id != MAIN_MODULE_NODE_ID) {
@@ -35,7 +71,13 @@ static int8_t handle_KPLC_IOState_Request(CanardRxTransfer* transfer)
 		ret = -FailureReason_CannotDecodeMessage;
 	}
 	else {
-		// TODO: accept request
+		ret = ValidateIOStateRequest(request);
+		if (ret < 0) {
+			responseStatus = UAVCAN_KPLC_IOSTATE_STATUS_ERROR_INCONSISTENCY;
+		}
+		else {
+			ApplyIOState(&request.state[0]);
+		}
 	}
 	
 	uint8_t buffer[UAVCAN_KPLC_IOSTATE_RESPONSE_MAX_SIZE];
@@ -60,22 +102,6 @@ static int8_t handle_KPLC_IOState_Request(CanardRxTransfer* transfer)
 	
 	if (ret_int16 < 0) {
 		return (int8_t)ret_int16;
-	}
-	
-	return 0;
-}
-
-static int8_t handle_KPLC_IOState_Response(CanardRxTransfer* transfer)
-{
-	uavcan_kplc_IOStateResponse response;
-	int8_t ret;
-	ret = uavcan_kplc_IOStateResponse_decode(transfer, transfer->payload_len, &response, NULL);
-	if (ret < 0) {
-		return -FailureReason_CannotDecodeMessage;
-	}
-	
-	if (response.status != 0) {
-		return -FailureReason_UnexpectedResponse;
 	}
 	
 	return 0;
@@ -211,9 +237,6 @@ void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer)
 		case CanardTransferTypeResponse:
 			switch(transfer->data_type_id)
 			{
-				case UAVCAN_KPLC_IOSTATE_ID:
-					handler = handle_KPLC_IOState_Response;
-					break;
 			}
 			break;
 		case CanardTransferTypeBroadcast:
@@ -243,7 +266,7 @@ int8_t ValidateMasterNodeState()
 {
 	uint32_t now = millis();
 	
-	if ((now - g_mainModuleLastStatusUpdateTime) > 2 * CANARD_NODESTATUS_PERIOD) {
+	if ((now - g_mainModuleLastStatusUpdateTime) > 2 * CANARD_NODESTATUS_PERIOD_MSEC) {
 		return -FailureReason_MasterStateValidationError;
 	}
 	
@@ -252,6 +275,14 @@ int8_t ValidateMasterNodeState()
 
 int main(void)
 {
+	DDRA = _BV(PORTA4) | _BV(PORTA5) | _BV(PORTA6) | _BV(PORTA7);
+	DDRB |= _BV(PORTB3); // MCP2515 Reset
+	DDRC = 0xFF;
+	DDRD = 0xFF;
+	
+	PORTA = _BV(PORTA0) | _BV(PORTA1) | _BV(PORTA2) | _BV(PORTA3);
+	PORTB |= _BV(PORTB0) | _BV(PORTB1) | _BV(PORTB3);
+	
 	int8_t result;
 	result = setup();
 	if (result < 0) {
@@ -300,6 +331,11 @@ int main(void)
 			}
 			case NodeState_Error:
 			{
+				// Set all outputs to the low state.
+				PORTA &= ~(_BV(PORTA4) | _BV(PORTA5) | _BV(PORTA6) | _BV(PORTA7));
+				PORTC = 0;
+				PORTD = 0;
+				
 				cli();
 				break;
 			}

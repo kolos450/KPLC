@@ -142,12 +142,12 @@ int8_t setup(void)
 		return -FailureReason_CannotInit;
 	}
 	
-	result = g_timers.every(CANARD_NODESTATUS_PERIOD, broadcastNodeStatus);
+	result = g_timers.every(CANARD_NODESTATUS_PERIOD_MSEC, broadcastNodeStatus);
 	if (result < 0) {
 		return -FailureReason_CannotInit;
 	}
 	
-	result = g_timers.every(CANARD_RECOMMENDED_STALE_TRANSFER_CLEANUP_INTERVAL_USEC, canardCleanupStaleTransfersHandler);
+	result = g_timers.every(CANARD_RECOMMENDED_STALE_TRANSFER_CLEANUP_INTERVAL_USEC / 1000, canardCleanupStaleTransfersHandler);
 	if (result < 0) {
 		return -FailureReason_CannotInit;
 	}
