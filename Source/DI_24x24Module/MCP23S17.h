@@ -77,33 +77,33 @@ public:
     /// @param protocolInitOverride SPI will not be initialized when true.
     void initialize(bool protocolInitOverride = false);
 
-    /// @param mode OUTPUT => all out, INPUT => all in, 0xxxx => custom setup.
-    void gpioPinMode(uint16_t mode);
+    /// @param direction OUTPUT => all out, INPUT => all in, 0xxxx => custom setup.
+    void writeDataDirection(uint16_t direction);
 
     /// @param value HIGH => all Hi, LOW => all Low, 0xxxx => custom setup.
-    void writeGpioPort(uint16_t value);
+    void write(uint16_t value);
 
     /// Read the pins state.
-    uint16_t readGpioPort();
+    uint16_t read();
 
     /// Read a byte from chip register.
-    uint8_t gpioRegisterReadByte(byte reg);
+    uint8_t readRegisterByte(byte reg);
 
     /// Read a word from chip register.
-    uint16_t gpioRegisterReadWord(byte reg);
+    uint16_t readRegisterWord(byte reg);
 
     /// Write a byte in a chip register, optional for both ports.
     /// @param both Write the same register in bank A & B when true.
-    void gpioRegisterWriteByte(byte reg, byte data, bool both = false);
+    void writeRegisterByte(byte reg, byte data, bool both = false);
 
     /// Write a word in a chip register.
-    void gpioRegisterWriteWord(byte reg, word data);
+    void writeRegisterWord(byte reg, word data);
 
     /// @param data HIGH => all pullup, LOW => all pulldown, 0xxxx => custom setup.
-    void portPullup(uint16_t data);
+    void writePullup(uint16_t data);
 
     /// Direct access command.
-    uint16_t gpioReadAddress(byte addr);
+    uint16_t readByAddress(byte addr);
 
 
 
@@ -197,7 +197,7 @@ void MCP23S17<MCP23S17Tag>::initialize(bool protocolInitOverride)
 
 
 template <class MCP23S17Tag>
-uint16_t MCP23S17<MCP23S17Tag>::gpioReadAddress(byte addr)
+uint16_t MCP23S17<MCP23S17Tag>::readByAddress(byte addr)
 {
     _GPIOstartSend(1);
     MCP23S17Tag::SPI->transfer(addr);
@@ -208,7 +208,7 @@ uint16_t MCP23S17<MCP23S17Tag>::gpioReadAddress(byte addr)
 
 
 template <class MCP23S17Tag>
-void MCP23S17<MCP23S17Tag>::gpioPinMode(uint16_t mode)
+void MCP23S17<MCP23S17Tag>::writeDataDirection(uint16_t mode)
 {
     if (mode == INPUT)
     {
@@ -227,7 +227,7 @@ void MCP23S17<MCP23S17Tag>::gpioPinMode(uint16_t mode)
 }
 
 template <class MCP23S17Tag>
-void MCP23S17<MCP23S17Tag>::writeGpioPort(uint16_t value)
+void MCP23S17<MCP23S17Tag>::write(uint16_t value)
 {
     if (value == HIGH)
     {
@@ -245,13 +245,13 @@ void MCP23S17<MCP23S17Tag>::writeGpioPort(uint16_t value)
 }
 
 template <class MCP23S17Tag>
-uint16_t MCP23S17<MCP23S17Tag>::readGpioPort()
+uint16_t MCP23S17<MCP23S17Tag>::read()
 {
-    return gpioReadAddress(MCP23S17_GPIO);
+    return readByAddress(MCP23S17_GPIO);
 }
 
 template <class MCP23S17Tag>
-void MCP23S17<MCP23S17Tag>::portPullup(uint16_t data)
+void MCP23S17<MCP23S17Tag>::writePullup(uint16_t data)
 {
     if (data == HIGH)
     {
@@ -269,7 +269,7 @@ void MCP23S17<MCP23S17Tag>::portPullup(uint16_t data)
 }
 
 template <class MCP23S17Tag>
-uint8_t MCP23S17<MCP23S17Tag>::gpioRegisterReadByte(byte reg)
+uint8_t MCP23S17<MCP23S17Tag>::readRegisterByte(byte reg)
 {
     uint8_t data = 0;
     _GPIOstartSend(1);
@@ -280,7 +280,7 @@ uint8_t MCP23S17<MCP23S17Tag>::gpioRegisterReadByte(byte reg)
 }
 
 template <class MCP23S17Tag>
-uint16_t MCP23S17<MCP23S17Tag>::gpioRegisterReadWord(byte reg)
+uint16_t MCP23S17<MCP23S17Tag>::readRegisterWord(byte reg)
 {
     uint16_t data = 0;
     _GPIOstartSend(1);
@@ -291,7 +291,7 @@ uint16_t MCP23S17<MCP23S17Tag>::gpioRegisterReadWord(byte reg)
 }
 
 template <class MCP23S17Tag>
-void MCP23S17<MCP23S17Tag>::gpioRegisterWriteByte(byte reg, byte data, bool both)
+void MCP23S17<MCP23S17Tag>::writeRegisterByte(byte reg, byte data, bool both)
 {
     if (!both)
     {
@@ -308,7 +308,7 @@ void MCP23S17<MCP23S17Tag>::gpioRegisterWriteByte(byte reg, byte data, bool both
 }
 
 template <class MCP23S17Tag>
-void MCP23S17<MCP23S17Tag>::gpioRegisterWriteWord(byte reg, word data)
+void MCP23S17<MCP23S17Tag>::writeRegisterWord(byte reg, word data)
 {
     _GPIOwriteWord(reg, (word)data);
 }

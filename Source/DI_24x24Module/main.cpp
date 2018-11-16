@@ -221,12 +221,12 @@ void ProcessIOStateTimerCallback(uint8_t _)
 int8_t setupMCP23S17()
 {
 	MCP23S17_A.initialize();
-	MCP23S17_A.gpioPinMode(INPUT);
-	MCP23S17_A.portPullup(HIGH);
+	MCP23S17_A.writeDataDirection(INPUT);
+	MCP23S17_A.writePullup(HIGH);
 	
 	MCP23S17_B.initialize();
-	MCP23S17_B.gpioPinMode(INPUT);
-	MCP23S17_B.portPullup(HIGH);
+	MCP23S17_B.writeDataDirection(INPUT);
+	MCP23S17_B.writePullup(HIGH);
 	
 	int8_t result = g_timers.every(IOSTATE_MIN_TRANSMIT_INTERVAL_MSEC, ProcessIOStateTimerCallback);
 	if (result < 0) {
@@ -238,8 +238,8 @@ int8_t setupMCP23S17()
 
 int8_t ProcessIOState(bool forced)
 {
-	uint16_t a = MCP23S17_A.readGpioPort();
-	uint16_t b = MCP23S17_B.readGpioPort();
+	uint16_t a = MCP23S17_A.read();
+	uint16_t b = MCP23S17_B.read();
 	
 	if (forced || a != g_ioStateA || b != g_ioStateB)
 	{
