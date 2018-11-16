@@ -220,11 +220,11 @@ void ProcessIOStateTimerCallback(uint8_t _)
 
 int8_t setupMCP23S17()
 {
-	MCP23S17_A.begin();
+	MCP23S17_A.initialize();
 	MCP23S17_A.gpioPinMode(INPUT);
 	MCP23S17_A.portPullup(HIGH);
 	
-	MCP23S17_B.begin();
+	MCP23S17_B.initialize();
 	MCP23S17_B.gpioPinMode(INPUT);
 	MCP23S17_B.portPullup(HIGH);
 	
