@@ -20,53 +20,54 @@ int canardAVRInit(uint32_t bitrate)
     can_bitrate_t br;
     switch (bitrate)
     {
-    case 10000:
-    {
-        br = BITRATE_10_KBPS;
-        break;
-    }
-    case 20000:
-    {
-        br = BITRATE_20_KBPS;
-        break;
-    }
-    case 50000:
-    {
-        br = BITRATE_50_KBPS;
-        break;
-    }
-    case 100000:
-    {
-        br = BITRATE_100_KBPS;
-        break;
-    }
-    case 125000:
-    {
-        br = BITRATE_125_KBPS;
-        break;
-    }
-    case 250000:
-    {
-        br = BITRATE_250_KBPS;
-        break;
-    }
-    case 500000:
-    {
-        br = BITRATE_500_KBPS;
-        break;
-    }
-    case 1000000:
-    {
-        br = BITRATE_1_MBPS;
-        break;
-    }
-    default:
-    {
-        return -1;
-    }
+		case 10000:
+		{
+			br = BITRATE_10_KBPS;
+			break;
+		}
+		case 20000:
+		{
+			br = BITRATE_20_KBPS;
+			break;
+		}
+		case 50000:
+		{
+			br = BITRATE_50_KBPS;
+			break;
+		}
+		case 100000:
+		{
+			br = BITRATE_100_KBPS;
+			break;
+		}
+		case 125000:
+		{
+			br = BITRATE_125_KBPS;
+			break;
+		}
+		case 250000:
+		{
+			br = BITRATE_250_KBPS;
+			break;
+		}
+		case 500000:
+		{
+			br = BITRATE_500_KBPS;
+			break;
+		}
+		case 1000000:
+		{
+			br = BITRATE_1_MBPS;
+			break;
+		}
+		default:
+		{
+			return -1;
+		}
     }
 
-    can_init(br);
+    if(!can_init(br))
+		return -1;
     can_set_mode(NORMAL_MODE);
 
     // create a new filter for receiving all messages

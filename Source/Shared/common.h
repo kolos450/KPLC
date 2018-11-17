@@ -48,6 +48,7 @@ enum FailureReason
 extern uint8_t g_nodeStatusHealth;
 extern uint8_t g_nodeStatusMode;
 extern NodeState g_nodeState;
+extern FailureReason g_failureReason;
 
 extern CanardInstance g_canard;              // The canard library instance.
 extern uint8_t g_canard_memory_pool[1024];   // Arena for memory allocation, used by the library.

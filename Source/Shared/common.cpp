@@ -3,6 +3,7 @@
 uint8_t g_nodeStatusHealth;
 uint8_t g_nodeStatusMode;
 NodeState g_nodeState;
+FailureReason g_failureReason;
 
 static uavcan_protocol_NodeStatus makeNodeStatusMessage()
 {
@@ -83,6 +84,7 @@ void fail(int8_t reason)
 	g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_OFFLINE;
 	g_nodeStatusHealth = UAVCAN_PROTOCOL_NODESTATUS_HEALTH_CRITICAL;
 	g_nodeState = NodeState_Error;
+	g_failureReason = (FailureReason)(-reason);
 	
 	uint8_t buffer[UAVCAN_PROTOCOL_PANIC_MAX_SIZE];
 	static uint8_t transfer_id = 0;
