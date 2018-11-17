@@ -3,6 +3,7 @@
 #include "Arduino/Arduino.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 #include "common.h"
 #include "Arduino/SPI.h"
 #include "MCP23S17.h"
@@ -44,6 +45,22 @@ static int8_t handle_KPLC_IOState_Response(CanardRxTransfer* transfer)
 	return 0;
 }
 
+static int8_t validateMasterNodeStatus(uavcan_protocol_NodeStatus status)
+{
+	if (status.health != UAVCAN_PROTOCOL_NODESTATUS_HEALTH_OK) {
+		return -FailureReason_BadNodeStatus;
+	}
+	if (status.mode != UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL) {
+		return -FailureReason_BadNodeStatus;
+	}
+	if (g_nodeState == NodeState_Operational &&
+		status.vendor_specific_status_code != NodeState_Operational) {
+		return -FailureReason_MasterStateValidationError;
+	}
+	
+	return 0;
+}
+
 static int8_t handle_protocol_NodeStatus(CanardRxTransfer* transfer)
 {
 	if (transfer->source_node_id != MAIN_MODULE_NODE_ID) {
@@ -59,11 +76,9 @@ static int8_t handle_protocol_NodeStatus(CanardRxTransfer* transfer)
 	
 	g_mainModuleLastStatusUpdateTime = millis();
 	
-	if (status.health != UAVCAN_PROTOCOL_NODESTATUS_HEALTH_OK) {
-		return -FailureReason_BadNodeStatus;
-	}
-	if (status.mode != UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL) {
-		return -FailureReason_BadNodeStatus;
+	ret = validateMasterNodeStatus(status);
+	if (ret < 0) {
+		return ret;
 	}
 	
 	return 0;
@@ -273,6 +288,16 @@ int8_t ProcessIOState(bool forced)
 	return 0;
 }
 
+void setLed()
+{
+	PORTD |= _BV(PORTD6);
+}
+
+void resetLed()
+{
+	PORTD &= ~_BV(PORTD6);
+}
+
 int main(void)
 {
 	DDRD |= _BV(PORTD6); // LED
@@ -285,12 +310,12 @@ int main(void)
 	
 	int8_t result;
 	
-	result = setupMCP23S17();
+	result = setup();
 	if (result < 0) {
 		fail(result);
 	}
 	
-	result = setup();
+	result = setupMCP23S17();
 	if (result < 0) {
 		fail(result);
 	}
@@ -309,8 +334,8 @@ int main(void)
 					fail(result);
 					continue;
 				}
-				
-				receiveCanard();
+ 				
+ 				receiveCanard();
 				g_timers.update();
 				
 				break;
@@ -343,6 +368,15 @@ int main(void)
 			}
 			case NodeState_Error:
 			{
+				for (int i = 0; i < g_failureReason; i++) {
+					setLed();
+					_delay_ms(300);
+					resetLed();
+					_delay_ms(300);
+				}
+				
+				_delay_ms(1000);
+				
 				cli();
 				break;
 			}

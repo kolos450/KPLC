@@ -107,6 +107,22 @@ static int8_t handle_KPLC_IOState_Request(CanardRxTransfer* transfer)
 	return 0;
 }
 
+static int8_t validateMasterNodeStatus(uavcan_protocol_NodeStatus status)
+{
+	if (status.health != UAVCAN_PROTOCOL_NODESTATUS_HEALTH_OK) {
+		return -FailureReason_BadNodeStatus;
+	}
+	if (status.mode != UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL) {
+		return -FailureReason_BadNodeStatus;
+	}
+	if (g_nodeState == NodeState_Operational &&
+	status.vendor_specific_status_code != NodeState_Operational) {
+		return -FailureReason_MasterStateValidationError;
+	}
+	
+	return 0;
+}
+
 static int8_t handle_protocol_NodeStatus(CanardRxTransfer* transfer)
 {
 	if (transfer->source_node_id != MAIN_MODULE_NODE_ID) {
@@ -122,11 +138,9 @@ static int8_t handle_protocol_NodeStatus(CanardRxTransfer* transfer)
 	
 	g_mainModuleLastStatusUpdateTime = millis();
 	
-	if (status.health != UAVCAN_PROTOCOL_NODESTATUS_HEALTH_OK) {
-		return -FailureReason_BadNodeStatus;
-	}
-	if (status.mode != UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL) {
-		return -FailureReason_BadNodeStatus;
+	ret = validateMasterNodeStatus(status);
+	if (ret < 0) {
+		return ret;
 	}
 	
 	return 0;

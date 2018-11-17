@@ -40,7 +40,7 @@ enum FailureReason
 	FailureReason_CannotInit = 11,
 	FailureReason_DriverCannotTransmit = 12,
 	FailureReason_SlavesStateValidationError = 13,
-	FailureReason_MasterStateValidationError = 13,
+	FailureReason_MasterStateValidationError = 14,
 };
 
 #define GET_MICROS (uint64_t)millis() * 1000ULL

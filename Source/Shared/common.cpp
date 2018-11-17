@@ -12,7 +12,7 @@ static uavcan_protocol_NodeStatus makeNodeStatusMessage()
 		.health = g_nodeStatusHealth,
 		.mode = g_nodeStatusMode,
 		.sub_mode = 0,
-		.vendor_specific_status_code = 0
+		.vendor_specific_status_code = g_nodeState,
 	};
 }
 

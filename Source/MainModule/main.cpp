@@ -78,6 +78,22 @@ static int8_t handle_KPLC_IOState_Response(CanardRxTransfer* transfer)
 	return 0;
 }
 
+static int8_t validateSlaveNodeStatus(uavcan_protocol_NodeStatus& status)
+{
+	if (status.health != UAVCAN_PROTOCOL_NODESTATUS_HEALTH_OK) {
+		return -FailureReason_BadNodeStatus;
+	}
+	if (status.mode != UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL) {
+		return -FailureReason_BadNodeStatus;
+	}
+	if (g_nodeState == NodeState_Operational &&
+		status.vendor_specific_status_code != NodeState_Operational) {
+		return -FailureReason_SlavesStateValidationError;
+	}
+	
+	return 0;
+}
+
 static int8_t handle_protocol_NodeStatus(CanardRxTransfer* transfer)
 {
 	int8_t ret;
@@ -99,11 +115,10 @@ static int8_t handle_protocol_NodeStatus(CanardRxTransfer* transfer)
 	if (!nodeFound) {
 		return 0;
 	}
-	if (status.health != UAVCAN_PROTOCOL_NODESTATUS_HEALTH_OK) {
-		return -FailureReason_BadNodeStatus;
-	}
-	if (status.mode != UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL) {
-		return -FailureReason_BadNodeStatus;
+	
+	ret = validateSlaveNodeStatus(status);
+	if (ret < 0) {
+		return ret;
 	}
 	
 	return 0;
