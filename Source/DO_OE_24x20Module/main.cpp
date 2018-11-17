@@ -3,6 +3,7 @@
 #include "Arduino/Arduino.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/wdt.h>
 #include "common.h"
 
 #include "uavcan/kplc/IOState.h"
@@ -305,8 +306,13 @@ int main(void)
 	
 	g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL;
 	
+	wdt_enable(WDTO_250MS);
+	WDTCSR |= _BV(WDE);
+	
 	while (1)
 	{
+		wdt_reset();
+		
 		switch (g_nodeState)
 		{
 			case NodeState_Initial:
@@ -350,6 +356,7 @@ int main(void)
 				PORTC = 0;
 				PORTD = 0;
 				
+				wdt_disable();
 				cli();
 				break;
 			}

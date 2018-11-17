@@ -188,7 +188,7 @@ void MCP23S17<MCP23S17Tag>::initialize(bool protocolInitOverride)
 #endif
     }
     MCP23S17Tag::InitCS();
-    delay(100);
+    delay(10);
 
     _useHaen == 1 ? _GPIOwriteByte(MCP23S17_IOCON, 0b00101000) : _GPIOwriteByte(MCP23S17_IOCON, 0b00100000);
     _gpioDirection = 0xFFFF;//all in

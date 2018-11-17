@@ -1,8 +1,8 @@
 #include "common.h"
 
-uint8_t g_nodeStatusHealth;
-uint8_t g_nodeStatusMode;
-NodeState g_nodeState;
+uint8_t g_nodeStatusHealth = UAVCAN_PROTOCOL_NODESTATUS_HEALTH_OK;
+uint8_t g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_INITIALIZATION;
+NodeState g_nodeState = NodeState_Initial;
 FailureReason g_failureReason;
 
 static uavcan_protocol_NodeStatus makeNodeStatusMessage()
@@ -25,12 +25,12 @@ static void broadcastNodeStatus(uint8_t timerId)
 	int16_t len = uavcan_protocol_NodeStatus_encode(&status, &buffer[0]);
 	
 	int16_t result = canardBroadcast(&g_canard,
-	UAVCAN_PROTOCOL_NODESTATUS_SIGNATURE,
-	UAVCAN_PROTOCOL_NODESTATUS_ID,
-	&transfer_id,
-	CANARD_TRANSFER_PRIORITY_LOW,
-	buffer,
-	len);
+		UAVCAN_PROTOCOL_NODESTATUS_SIGNATURE,
+		UAVCAN_PROTOCOL_NODESTATUS_ID,
+		&transfer_id,
+		CANARD_TRANSFER_PRIORITY_LOW,
+		buffer,
+		len);
 	
 	if (result < 0) {
 		fail((int8_t)result);
@@ -63,14 +63,14 @@ int8_t handle_protocol_GetNodeInfo(CanardRxTransfer* transfer)
 	uavcan_protocol_GetNodeInfoResponse dto = makeNodeInfoMessage();
 	const uint16_t len = uavcan_protocol_GetNodeInfoResponse_encode(&dto, &buffer[0]);
 	int16_t result = canardRequestOrRespond(&g_canard,
-	transfer->source_node_id,
-	UAVCAN_PROTOCOL_GETNODEINFO_SIGNATURE,
-	UAVCAN_PROTOCOL_GETNODEINFO_ID,
-	&transfer->transfer_id,
-	transfer->priority,
-	CanardResponse,
-	&buffer[0],
-	(uint16_t)len);
+		transfer->source_node_id,
+		UAVCAN_PROTOCOL_GETNODEINFO_SIGNATURE,
+		UAVCAN_PROTOCOL_GETNODEINFO_ID,
+		&transfer->transfer_id,
+		transfer->priority,
+		CanardResponse,
+		&buffer[0],
+		(uint16_t)len);
 	
 	if (result < 0) {
 		return (int8_t)result;
@@ -117,10 +117,6 @@ static void canardCleanupStaleTransfersHandler(uint8_t timerId)
 
 int8_t setup(void)
 {
-	g_nodeStatusHealth = UAVCAN_PROTOCOL_NODESTATUS_HEALTH_OK;
-	g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_INITIALIZATION;
-	g_nodeState = NodeState_Initial;
-	
 	int8_t result;
 	
 	arduino_init();
@@ -185,5 +181,22 @@ void receiveCanard(void)
 	if (res)
 	{
 		canardHandleRxFrame(&g_canard, &rx_frame, GET_MICROS);
+	}
+}
+
+// This function is called upon a HARDWARE RESET:
+void wdt_first(void) __attribute__((naked)) __attribute__((section(".init7")));
+
+void wdt_first(void)
+{
+ 	if ((MCUSR & _BV(WDRF)) == _BV(WDRF))
+ 	{
+		g_failureReason = FailureReason_Watchdog;
+		g_nodeState = NodeState_Error;
+		
+		MCUSR &= ~(_BV(WDRF)); // Clear reset flag.
+		wdt_disable();
+		// http://www.atmel.com/webdoc/AVRLibcReferenceManual/FAQ_1faq_softreset.html
+		// https://www.pocketmagic.net/avr-watchdog/
 	}
 }

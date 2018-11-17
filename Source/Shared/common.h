@@ -3,6 +3,7 @@
 #include "main_config.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/wdt.h>
 #include "canard/canard_avr.h"
 #include "canard/canard.h"
 #include "Timer/Timer.h"
@@ -41,6 +42,7 @@ enum FailureReason
 	FailureReason_DriverCannotTransmit = 12,
 	FailureReason_SlavesStateValidationError = 13,
 	FailureReason_MasterStateValidationError = 14,
+	FailureReason_Watchdog = 15,
 };
 
 #define GET_MICROS (uint64_t)millis() * 1000ULL

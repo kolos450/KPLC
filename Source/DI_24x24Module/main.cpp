@@ -3,6 +3,7 @@
 #include "Arduino/Arduino.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/wdt.h>
 #include <util/delay.h>
 #include "common.h"
 #include "Arduino/SPI.h"
@@ -299,7 +300,7 @@ void resetLed()
 }
 
 int main(void)
-{
+{	
 	DDRD |= _BV(PORTD6); // LED
 	DDRB |= _BV(PORTB1); // MCP2515 Reset
 	
@@ -322,8 +323,13 @@ int main(void)
 	
 	g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL;
 	
+	wdt_enable(WDTO_250MS);
+	WDTCSR |= _BV(WDE);
+	
 	while (1)
 	{
+		wdt_reset();
+		
 		switch (g_nodeState)
 		{
 			case NodeState_Initial:
@@ -368,16 +374,19 @@ int main(void)
 			}
 			case NodeState_Error:
 			{
+				wdt_disable();
+				cli();
+				
+				resetLed();
+				_delay_ms(1000);
+				
 				for (int i = 0; i < g_failureReason; i++) {
 					setLed();
 					_delay_ms(300);
 					resetLed();
 					_delay_ms(300);
 				}
-				
-				_delay_ms(1000);
-				
-				cli();
+
 				break;
 			}
 		}
