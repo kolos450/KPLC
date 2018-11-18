@@ -3,6 +3,7 @@
 #include "main_config.h"
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <avr/pgmspace.h>
 #include <avr/wdt.h>
 #include "canard/canard_avr.h"
 #include "canard/canard.h"
@@ -15,34 +16,46 @@
 enum NodeState
 {
 	NodeState_Initial = 0,
-	NodeState_Error = 1,
-	NodeState_Operational = 2,
+	NodeState_Operational = 1,
+	NodeState_Error = 2,
 };
 
 enum ParamKind
 {
 	ParamKind_NodeState = 0,
+	
+	ParamKind_Max = 0,
 };
+
+const char ParamKind_NodeState_Name[] PROGMEM = "NodeState";
+const uint8_t ParamKind_Name_MaxLength = 16;
+
+const char* const ParamKind_Names[] =
+{
+	ParamKind_NodeState_Name,
+};
+
+ParamKind parseParamKind(char* name, int len);
 
 enum FailureReason
 {
 	FailureReason_NoFailure = 0,
 	
 	FailureReason_Other = 1,
-	FailureReason_InvalidArgument = 2,
-	FailureReason_OutOfMemory = 3,
-	FailureReason_NodeIdNotSet = 4,
-	FailureReason_PanicReceived = 5,
-	FailureReason_CannotDecodeMessage = 6,
-	FailureReason_PLCError = 7,
-	FailureReason_UnexpectedResponse = 8,
-	FailureReason_CanardInternal = 9,
-	FailureReason_BadNodeStatus = 10,
-	FailureReason_CannotInit = 11,
-	FailureReason_DriverCannotTransmit = 12,
-	FailureReason_SlavesStateValidationError = 13,
-	FailureReason_MasterStateValidationError = 14,
-	FailureReason_Watchdog = 15,
+	FailureReason_Watchdog = 2,
+	FailureReason_InvalidArgument = 3,
+	FailureReason_OutOfMemory = 4,
+	FailureReason_NodeIdNotSet = 5,
+	FailureReason_PanicReceived = 6,
+	FailureReason_CannotDecodeMessage = 7,
+	FailureReason_PLCError = 8,
+	FailureReason_UnexpectedResponse = 9,
+	FailureReason_CanardInternal = 10,
+	FailureReason_BadNodeStatus = 11,
+	FailureReason_CannotInit = 12,
+	FailureReason_DriverCannotTransmit = 13,
+	FailureReason_SlavesStateValidationError = 14,
+	FailureReason_MasterStateValidationError = 15,
 	FailureReason_RXBufferOverflow = 16,
 };
 

@@ -160,36 +160,64 @@ static int8_t handle_protocol_param_GetSet(CanardRxTransfer* transfer)
 		return -FailureReason_CannotDecodeMessage;
 	}
 	
-	switch ((ParamKind)request.index) {
+	ParamKind paramKind;
+	if (request.name.data && request.name.len) {
+		paramKind = parseParamKind((char*)request.name.data, request.name.len);
+	} else {
+		paramKind = (ParamKind)request.index;
+	}
+	
+	char paramName[ParamKind_Name_MaxLength + 1];
+	uavcan_protocol_param_GetSetResponse response;
+	
+	response.default_value.union_tag = UAVCAN_PROTOCOL_PARAM_VALUE_EMPTY;
+	response.min_value.union_tag = UAVCAN_PROTOCOL_PARAM_NUMERICVALUE_EMPTY;
+	response.max_value.union_tag = UAVCAN_PROTOCOL_PARAM_NUMERICVALUE_EMPTY;
+	
+	switch (paramKind)
+	{
 		case ParamKind_NodeState:
 		{
-			g_nodeState = (NodeState)request.value.boolean_value;
-			
-			uint8_t buffer[50]; // TODO
-			memset(buffer, 0, sizeof(buffer));
-			uavcan_protocol_param_GetSetResponse response;
-			response.value.boolean_value = g_nodeState;
-			uint16_t len = uavcan_protocol_param_GetSetResponse_encode(&response, &buffer[0]);
-			int16_t result = canardRequestOrRespond(&g_canard,
-				transfer->source_node_id,
-				UAVCAN_PROTOCOL_PARAM_GETSET_SIGNATURE,
-				UAVCAN_PROTOCOL_PARAM_GETSET_ID,
-				&transfer->transfer_id,
-				transfer->priority,
-				CanardResponse,
-				&buffer[0],
-				(uint16_t)len);
-			if (result < 0) {
-				return (int8_t)result;
+			if (request.value.union_tag == UAVCAN_PROTOCOL_PARAM_VALUE_BOOLEAN_VALUE)
+			{
+				g_nodeState = (NodeState)request.value.boolean_value;
 			}
+			
+			const char* paramNamePgm = ParamKind_Names[paramKind];
+			int paramKindNameLen = strlen_P(paramNamePgm);
+			strcpy_P(&paramName[0], paramNamePgm);
+			
+			response.name.len = paramKindNameLen;
+			response.name.data = (uint8_t*)(&paramName[0]);
+			
+			response.value.union_tag = UAVCAN_PROTOCOL_PARAM_VALUE_BOOLEAN_VALUE;
+			response.value.boolean_value = g_nodeState;
 			
 			break;
 		}
 		
 		default:
 		{
-			return -FailureReason_InvalidArgument;
+			response.name.len = 0;
+			response.name.data = 0;
 		}
+	}
+	
+	uint8_t buffer[50]; // TODO
+	memset(buffer, 0, sizeof(buffer));
+	uint16_t len = uavcan_protocol_param_GetSetResponse_encode(&response, &buffer[0]);
+	
+	int16_t result = canardRequestOrRespond(&g_canard,
+		transfer->source_node_id,
+		UAVCAN_PROTOCOL_PARAM_GETSET_SIGNATURE,
+		UAVCAN_PROTOCOL_PARAM_GETSET_ID,
+		&transfer->transfer_id,
+		transfer->priority,
+		CanardResponse,
+		&buffer[0],
+		(uint16_t)len);
+	if (result < 0) {
+		return (int8_t)result;
 	}
 	
 	return 0;

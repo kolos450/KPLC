@@ -134,11 +134,42 @@ static int8_t handle_protocol_param_GetSet(CanardRxTransfer* transfer)
 		return -FailureReason_CannotDecodeMessage;
 	}
 	
-	switch ((ParamKind)request.index) {
+	ParamKind paramKind;
+	if (request.name.data && request.name.len) {
+		paramKind = parseParamKind((char*)request.name.data, request.name.len);
+	} else {
+		paramKind = (ParamKind)request.index;
+	}
+	
+	uavcan_protocol_param_GetSetResponse response;
+	response.default_value.union_tag = UAVCAN_PROTOCOL_PARAM_VALUE_EMPTY;
+	response.min_value.union_tag = UAVCAN_PROTOCOL_PARAM_NUMERICVALUE_EMPTY;
+	response.max_value.union_tag = UAVCAN_PROTOCOL_PARAM_NUMERICVALUE_EMPTY;
+	
+	switch (paramKind)
+	{
 		default:
 		{
-			return -FailureReason_InvalidArgument;
+			response.name.len = 0;
+			response.name.data = 0;
 		}
+	}
+	
+	uint8_t buffer[50]; // TODO
+	memset(buffer, 0, sizeof(buffer));
+	uint16_t len = uavcan_protocol_param_GetSetResponse_encode(&response, &buffer[0]);
+	
+	int16_t result = canardRequestOrRespond(&g_canard,
+		transfer->source_node_id,
+		UAVCAN_PROTOCOL_PARAM_GETSET_SIGNATURE,
+		UAVCAN_PROTOCOL_PARAM_GETSET_ID,
+		&transfer->transfer_id,
+		transfer->priority,
+		CanardResponse,
+		&buffer[0],
+		(uint16_t)len);
+	if (result < 0) {
+		return (int8_t)result;
 	}
 	
 	return 0;
@@ -262,6 +293,7 @@ int8_t UpdateSlavesState(NodeState state)
 	uavcan_protocol_param_GetSetRequest request = {
 		.index = ParamKind_NodeState,
 	};
+	request.value.union_tag = UAVCAN_PROTOCOL_PARAM_VALUE_BOOLEAN_VALUE;
 	request.value.boolean_value = (uint8_t)state;
 	uint16_t len = uavcan_protocol_param_GetSetRequest_encode(&request, &buffer[0]);
 	

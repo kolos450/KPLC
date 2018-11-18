@@ -238,3 +238,26 @@ void wdt_first(void)
 		// https://www.pocketmagic.net/avr-watchdog/
 	}
 }
+
+ParamKind parseParamKind(char* name, int len)
+{
+	if (len > ParamKind_Name_MaxLength)
+		return (ParamKind)-1;
+		
+	char nameCopy[ParamKind_Name_MaxLength + 1];
+	memcpy(&nameCopy, name, len);
+	memset(&nameCopy + len, 0, ParamKind_Name_MaxLength + 1 - len);
+	
+	for (uint8_t i = 0; i <= ParamKind_Max; i++)
+	{
+		const char* pgmPtr = ParamKind_Names[i];
+		uint8_t pgmStringLen = strlen_P(pgmPtr);
+		if (pgmStringLen == pgmStringLen &&
+			strcmp_P(&nameCopy[0], pgmPtr) == 0)
+		{
+			return (ParamKind)i;
+		}
+	}
+	
+	return (ParamKind)-1;
+}

@@ -98,36 +98,64 @@ static int8_t handle_protocol_param_GetSet(CanardRxTransfer* transfer)
 		return -FailureReason_CannotDecodeMessage;
 	}
 	
-	switch ((ParamKind)request.index) {
+	ParamKind paramKind;
+	if (request.name.data && request.name.len) {
+		paramKind = parseParamKind((char*)request.name.data, request.name.len);
+	} else {
+		paramKind = (ParamKind)request.index;
+	}
+	
+	char paramName[ParamKind_Name_MaxLength + 1];
+	uavcan_protocol_param_GetSetResponse response;
+	
+	response.default_value.union_tag = UAVCAN_PROTOCOL_PARAM_VALUE_EMPTY;
+	response.min_value.union_tag = UAVCAN_PROTOCOL_PARAM_NUMERICVALUE_EMPTY;
+	response.max_value.union_tag = UAVCAN_PROTOCOL_PARAM_NUMERICVALUE_EMPTY;
+	
+	switch (paramKind)
+	{
 		case ParamKind_NodeState:
 		{
-			g_nodeState = (NodeState)request.value.boolean_value;
-			
-			uint8_t buffer[50]; // TODO
-			memset(buffer, 0, sizeof(buffer));
-			uavcan_protocol_param_GetSetResponse response;
-			response.value.boolean_value = g_nodeState;
-			uint16_t len = uavcan_protocol_param_GetSetResponse_encode(&response, &buffer[0]);
-			int16_t result = canardRequestOrRespond(&g_canard,
-				transfer->source_node_id,
-				UAVCAN_PROTOCOL_PARAM_GETSET_SIGNATURE,
-				UAVCAN_PROTOCOL_PARAM_GETSET_ID,
-				&transfer->transfer_id,
-				transfer->priority,
-				CanardResponse,
-				&buffer[0],
-				(uint16_t)len);
-			if (result < 0) {
-				return (int8_t)result;
+			if (request.value.union_tag == UAVCAN_PROTOCOL_PARAM_VALUE_BOOLEAN_VALUE)
+			{
+				g_nodeState = (NodeState)request.value.boolean_value;
 			}
+			
+			const char* paramNamePgm = ParamKind_Names[paramKind];
+			int paramKindNameLen = strlen_P(paramNamePgm);
+			strcpy_P(&paramName[0], paramNamePgm);
+			
+			response.name.len = paramKindNameLen;
+			response.name.data = (uint8_t*)(&paramName[0]);
+			
+			response.value.union_tag = UAVCAN_PROTOCOL_PARAM_VALUE_BOOLEAN_VALUE;
+			response.value.boolean_value = g_nodeState;
 			
 			break;
 		}
 		
 		default:
 		{
-			return -FailureReason_InvalidArgument;
+			response.name.len = 0;
+			response.name.data = 0;
 		}
+	}
+	
+	uint8_t buffer[50]; // TODO
+	memset(buffer, 0, sizeof(buffer));
+	uint16_t len = uavcan_protocol_param_GetSetResponse_encode(&response, &buffer[0]);
+	
+	int16_t result = canardRequestOrRespond(&g_canard,
+		transfer->source_node_id,
+		UAVCAN_PROTOCOL_PARAM_GETSET_SIGNATURE,
+		UAVCAN_PROTOCOL_PARAM_GETSET_ID,
+		&transfer->transfer_id,
+		transfer->priority,
+		CanardResponse,
+		&buffer[0],
+		(uint16_t)len);
+	if (result < 0) {
+		return (int8_t)result;
 	}
 	
 	return 0;
@@ -219,7 +247,8 @@ int8_t ValidateMasterNodeState()
 {
 	uint32_t now = millis();
 	
-	if ((now - g_mainModuleLastStatusUpdateTime) > 2 * CANARD_NODESTATUS_PERIOD_MSEC) {
+	// TODO: decrease multiplier.
+	if ((now - g_mainModuleLastStatusUpdateTime) > 3 * CANARD_NODESTATUS_PERIOD_MSEC) {
 		return -FailureReason_MasterStateValidationError;
 	}
 	
@@ -259,6 +288,9 @@ int8_t ProcessIOState(bool forced)
 	
 	if (forced || a != g_ioStateA || b != g_ioStateB)
 	{
+		g_ioStateA = a;
+		g_ioStateB = b;
+		
 		uint8_t buffer[UAVCAN_KPLC_IOSTATE_REQUEST_MAX_SIZE];
 		static uint8_t transfer_id = 0;
 		
@@ -299,6 +331,19 @@ void resetLed()
 	PORTD &= ~_BV(PORTD6);
 }
 
+bool swapLedState;
+void swapLed(uint8_t _)
+{
+	if (!swapLedState) {
+		setLed();
+		swapLedState = true;
+	}
+	else {
+		resetLed();
+		swapLedState = false;
+	}
+}
+
 ISR(INT0_vect)
 {
 	handleCanRxInterrupt();
@@ -327,6 +372,8 @@ int main(void)
 	}
 	
 	g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL;
+	
+	g_timers.every(500, swapLed);
 	
 	// Set up MCP2515 interrupt.
 	EICRA = _BV(ISC01);	// Trigger INT0 on falling edge
@@ -365,7 +412,6 @@ int main(void)
 				}
 				
 				receiveCanard();
-				g_timers.update();
 				
 				result = ValidateMasterNodeState();
 				if (result < 0) {
@@ -378,6 +424,8 @@ int main(void)
 					fail(result);
 					continue;
 				}
+				
+				g_timers.update();
 				
 				break;
 			}
