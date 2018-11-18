@@ -299,6 +299,11 @@ void resetLed()
 	PORTD &= ~_BV(PORTD6);
 }
 
+ISR(INT0_vect)
+{
+	handleCanRxInterrupt();
+}
+
 int main(void)
 {	
 	DDRD |= _BV(PORTD6); // LED
@@ -322,6 +327,10 @@ int main(void)
 	}
 	
 	g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL;
+	
+	// Set up MCP2515 interrupt.
+	EICRA = _BV(ISC01);	// Trigger INT0 on falling edge
+	EIMSK = _BV(INT0);	// Enable INT0
 	
 	wdt_enable(WDTO_250MS);
 	WDTCSR |= _BV(WDE);

@@ -43,6 +43,7 @@ enum FailureReason
 	FailureReason_SlavesStateValidationError = 13,
 	FailureReason_MasterStateValidationError = 14,
 	FailureReason_Watchdog = 15,
+	FailureReason_RXBufferOverflow = 16,
 };
 
 #define GET_MICROS (uint64_t)millis() * 1000ULL
@@ -74,3 +75,5 @@ bool shouldAcceptTransfer(
 void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer);
 
 int8_t handle_protocol_GetNodeInfo(CanardRxTransfer* transfer);
+
+void handleCanRxInterrupt();

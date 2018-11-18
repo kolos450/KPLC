@@ -288,6 +288,11 @@ int8_t ValidateMasterNodeState()
 	return 0;
 }
 
+ISR(INT2_vect)
+{
+	handleCanRxInterrupt();
+}
+
 int main(void)
 {
 	DDRA = _BV(PORTA4) | _BV(PORTA5) | _BV(PORTA6) | _BV(PORTA7);
@@ -305,6 +310,10 @@ int main(void)
 	}
 	
 	g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL;
+	
+	// Set up MCP2515 interrupt.
+	EICRA = _BV(ISC21);	// Trigger INT2 on falling edge
+	EIMSK = _BV(INT2);	// Enable INT2
 	
 	wdt_enable(WDTO_250MS);
 	WDTCSR |= _BV(WDE);

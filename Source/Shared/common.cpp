@@ -174,13 +174,51 @@ int8_t sendCanard(void)
 	return 0;
 }
 
+#define RX_FRAME_BUFFER_LENGTH 4
+static CanardCANFrame rx_frame_buffer[RX_FRAME_BUFFER_LENGTH];
+static CanardCANFrame rx_frame_buffer_copy[RX_FRAME_BUFFER_LENGTH];
+static uint8_t rx_frame_buffer_count = 0;
+
+void handleCanRxInterrupt()
+{
+	while (1)
+	{
+		CanardCANFrame rx_frame;
+		int res = canardAVRReceive(&rx_frame);
+		if (res == 0)
+		{
+			return;
+		}
+		
+		if (rx_frame_buffer_count == RX_FRAME_BUFFER_LENGTH)
+		{
+			fail(-FailureReason_RXBufferOverflow);
+		}
+		
+		rx_frame_buffer[rx_frame_buffer_count] = rx_frame;
+		rx_frame_buffer_count++;
+	}
+}
+
 void receiveCanard(void)
 {
-	CanardCANFrame rx_frame;
-	int res = canardAVRReceive(&rx_frame);
-	if (res)
+	if (rx_frame_buffer_count == 0)
 	{
-		canardHandleRxFrame(&g_canard, &rx_frame, GET_MICROS);
+		return;
+	}
+	
+	cli();
+	uint8_t framesNum = rx_frame_buffer_count;
+	for (uint8_t i = 0; i < framesNum; i++)
+	{
+		rx_frame_buffer_copy[i] = rx_frame_buffer[i];
+	}
+	rx_frame_buffer_count = 0;
+	sei();
+	
+	for (uint8_t i = 0; i < framesNum; i++)
+	{
+		canardHandleRxFrame(&g_canard, &rx_frame_buffer_copy[i], GET_MICROS);
 	}
 }
 

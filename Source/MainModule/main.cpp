@@ -321,6 +321,11 @@ int8_t UpdateSlavesIOState()
 	return 0;
 }
 
+ISR(INT0_vect)
+{
+	handleCanRxInterrupt();
+}
+
 int main(void)
 {
 	DDRD |= _BV(PORTD5) | _BV(PORTD6) | _BV(PORTD7); // LEDs
@@ -335,6 +340,10 @@ int main(void)
 	}
 	
 	g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL;
+	
+	// Set up MCP2515 interrupt.
+	EICRA = _BV(ISC01);	// Trigger INT2 on falling edge
+	EIMSK = _BV(INT0);	// Enable INT2
 	
 	wdt_enable(WDTO_250MS);
 	WDTCSR |= _BV(WDE);
