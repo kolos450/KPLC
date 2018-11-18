@@ -37,9 +37,15 @@ static void broadcastNodeStatus(uint8_t timerId)
 	}
 }
 
-static uavcan_protocol_GetNodeInfoResponse makeNodeInfoMessage()
+int8_t handle_protocol_GetNodeInfo(CanardRxTransfer* transfer)
 {
-	return uavcan_protocol_GetNodeInfoResponse {
+	const int bufferLength = 41 + sizeof(APP_NODE_NAME) - 1;
+	uint8_t buffer[bufferLength];
+	memset(buffer, 0, bufferLength);
+
+	char appNodeName[] = APP_NODE_NAME;
+	
+	uavcan_protocol_GetNodeInfoResponse dto = {
 		.status = makeNodeStatusMessage(),
 		.software_version = {
 			.major = APP_VERSION_MAJOR,
@@ -52,15 +58,9 @@ static uavcan_protocol_GetNodeInfoResponse makeNodeInfoMessage()
 			.unique_id = {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
 			.certificate_of_authenticity = {0,0}
 		},
-		.name = {0,0}
+		.name = {sizeof(APP_NODE_NAME), (uint8_t*)(&appNodeName)}
 	};
-}
-
-int8_t handle_protocol_GetNodeInfo(CanardRxTransfer* transfer)
-{
-	uint8_t buffer[UAVCAN_PROTOCOL_GETNODEINFO_RESPONSE_MAX_SIZE];
-	memset(buffer, 0, UAVCAN_PROTOCOL_GETNODEINFO_RESPONSE_MAX_SIZE);
-	uavcan_protocol_GetNodeInfoResponse dto = makeNodeInfoMessage();
+	
 	const uint16_t len = uavcan_protocol_GetNodeInfoResponse_encode(&dto, &buffer[0]);
 	int16_t result = canardRequestOrRespond(&g_canard,
 		transfer->source_node_id,

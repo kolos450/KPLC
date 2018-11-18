@@ -33,11 +33,15 @@
 
 #include <util/delay.h>
 
+/** current transmit buffer priority */
+uint8_t txprio = 3;
+
 // ----------------------------------------------------------------------------
 uint8_t mcp2515_send_message(const can_t *msg)
 {
 	// Status des MCP2515 auslesen
 	uint8_t status = mcp2515_read_status(SPI_READ_STATUS);
+	uint8_t ctrlreg;
 	
 	/* Statusbyte:
 	 *
@@ -47,19 +51,47 @@ uint8_t mcp2515_send_message(const can_t *msg)
 	 *  6	TXB2CNTRL.TXREQ
 	 */
 	uint8_t address;
-	if (_bit_is_clear(status, 2)) {
-		address = 0x00;
-	}
-	else if (_bit_is_clear(status, 4)) {
-		address = 0x02;
-	} 
-	else if (_bit_is_clear(status, 6)) {
-		address = 0x04;
-	}
-	else {
-		// Alle Puffer sind belegt,
-		// Nachricht kann nicht verschickt werden
-		return 0;
+	
+	// Do some priority fiddling to get FIFO behavior.
+	switch (status & 0x54) {
+		
+		case 0x00:
+			// all three buffers free
+			ctrlreg = TXB2CTRL;
+			address = 0x04;
+			txprio = 3;
+			break;
+		
+		case 0x40:
+		case 0x44:
+			ctrlreg = TXB1CTRL;
+			address = 0x02;
+			break;
+		
+		case 0x10:
+		case 0x50:
+			ctrlreg = TXB0CTRL;
+			address = 0x00;
+			break;
+		
+		case 0x04:
+		case 0x14:
+			ctrlreg = TXB2CTRL;
+			address = 0x04;
+		
+			if (txprio == 0) {
+				// Set priority of buffer 1 and buffer 0 to highest.
+				mcp2515_bit_modify(TXB1CTRL, 0x03, 0x03);
+				mcp2515_bit_modify(TXB0CTRL, 0x03, 0x03);
+				txprio = 2;
+			} else {
+				txprio--;
+			}
+			break;
+		
+		default:
+			// No free transmit buffer.
+			return 0;
 	}
 	
 	RESET(MCP2515_CS);
@@ -93,6 +125,9 @@ uint8_t mcp2515_send_message(const can_t *msg)
 	SET(MCP2515_CS);
 	
 	_delay_us(1);
+	
+	// Set buffer priority.
+	mcp2515_bit_modify(ctrlreg, 0x03, txprio);
 	
 	// CAN Nachricht verschicken
 	// die letzten drei Bit im RTS Kommando geben an welcher

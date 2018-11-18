@@ -177,7 +177,8 @@ int canardAVRConfigureAcceptanceFilters(uint8_t node_id)
         res = -1;
     }
 
-    if (!can_set_filter(1, &filter_Srv))
+	// A [2] mask and filter would be applied to the second RX buffer of MCP2515.
+    if (!can_set_filter(2, &filter_Srv))
     {
         res = -1;
     }
