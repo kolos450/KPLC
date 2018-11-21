@@ -36,6 +36,15 @@ Timer<4> g_timers;
 
 int8_t ProcessIOState(bool forced = false);
 
+uint8_t readNodeId()
+{
+	return	((PINC & _BV(PINC5)) >> 5) |
+			((PIND & _BV(PIND0)) << 1) |
+			((PIND & _BV(PIND1)) >> 1) |
+			(PIND & (_BV(PIND3) | _BV(PIND4))) |
+			((PINE & _BV(PINE0)) << 5);
+}
+
 static int8_t handle_KPLC_IOState_Response(CanardRxTransfer* transfer)
 {
 	uavcan_kplc_IOStateResponse response;

@@ -133,10 +133,12 @@ int8_t setup(void)
 		onTransferReceived,                // Callback, see CanardOnTransferReception
 		shouldAcceptTransfer,              // Callback, see CanardShouldAcceptTransfer
 		NULL);
+		
+	uint8_t nodeId = readNodeId();
 	
-	canardSetLocalNodeID(&g_canard, CANARD_NODE_ID);
+	canardSetLocalNodeID(&g_canard, nodeId);
 	
-	if (canardAVRConfigureAcceptanceFilters(CANARD_NODE_ID) < 0) {
+	if (canardAVRConfigureAcceptanceFilters(nodeId) < 0) {
 		return -FailureReason_CannotInit;
 	}
 	

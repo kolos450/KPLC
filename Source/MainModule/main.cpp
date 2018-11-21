@@ -18,6 +18,11 @@ uint8_t g_canard_memory_pool[1024];   // Arena for memory allocation, used by th
 
 Timer<4> g_timers;
 
+uint8_t readNodeId()
+{
+	return MAIN_MODULE_NODE_ID;
+}
+
 static int8_t handle_KPLC_IOState_Request(CanardRxTransfer* transfer)
 {
 	uavcan_kplc_IOStateRequest request;

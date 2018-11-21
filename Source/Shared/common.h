@@ -13,6 +13,8 @@
 #include "uavcan/protocol/NodeStatus.h"
 #include "uavcan/protocol/Panic.h"
 
+#define MAIN_MODULE_NODE_ID 100
+
 enum NodeState
 {
 	NodeState_Initial = 0,
@@ -90,3 +92,5 @@ void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer);
 int8_t handle_protocol_GetNodeInfo(CanardRxTransfer* transfer);
 
 void handleCanRxInterrupt();
+
+uint8_t readNodeId();

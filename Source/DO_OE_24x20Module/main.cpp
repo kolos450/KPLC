@@ -12,14 +12,21 @@
 #include "uavcan/protocol/Panic.h"
 #include "uavcan/protocol/param/GetSet.h"
 
-#define MAIN_MODULE_NODE_ID 100
-
 static uint32_t g_mainModuleLastStatusUpdateTime = 0;
 
 CanardInstance g_canard;              // The canard library instance.
 uint8_t g_canard_memory_pool[1024];   // Arena for memory allocation, used by the library.
 
 Timer<4> g_timers;
+
+uint8_t readNodeId()
+{
+	return	((PINA & _BV(PINA3)) >> 3) |
+			((PINA & _BV(PINA2)) >> 1) |
+			((PINA & _BV(PINA1)) << 1) |
+			((PINA & _BV(PINA0)) << 3) |
+			((PINB & (_BV(PINB0) | _BV(PINB1))) << 4);
+}
 
 static int8_t ValidateIOStateRequest(uavcan_kplc_IOStateRequest request)
 {
