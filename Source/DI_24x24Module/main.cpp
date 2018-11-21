@@ -24,7 +24,13 @@ static uint32_t g_mainModuleLastStatusUpdateTime = 0;
 CanardInstance g_canard;              // The canard library instance.
 uint8_t g_canard_memory_pool[1024];   // Arena for memory allocation, used by the library.
 
-static uint16_t g_ioStateA = 0, g_ioStateB = 0;
+#define IOSTATE_LPF_TIME_OFFSET_UNSET 0xFF
+#define IOSTATE_LPF_TIME_MS 20
+static uint8_t g_ioState[3];
+static uint8_t g_ioStateStaging[3];
+static uint8_t g_ioStateLpfTimeOffsets[8 * 3];
+static uint32_t g_ioStateLpfTimeReference = 0;
+
 
 Timer<4> g_timers;
 
@@ -271,7 +277,7 @@ int8_t setupMCP23S17()
 	
 	MCP23S17_B.initialize();
 	MCP23S17_B.writeDataDirection(INPUT);
-	MCP23S17_B.writePullup(HIGH);
+	MCP23S17_B.writePullup(HIGH);	
 	
 	int8_t result = g_timers.every(IOSTATE_MIN_TRANSMIT_INTERVAL_MSEC, ProcessIOStateTimerCallback);
 	if (result < 0) {
@@ -281,40 +287,107 @@ int8_t setupMCP23S17()
 	return 0;
 }
 
+uint8_t sendIOState()
+{
+	uint8_t buffer[UAVCAN_KPLC_IOSTATE_REQUEST_MAX_SIZE];
+	static uint8_t transfer_id = 0;
+	
+	uavcan_kplc_IOStateRequest request;
+	for (uint8_t i = 0; i < 3; i++)
+	{
+		uint8_t state = g_ioState[i];
+		request.state[i] = state;
+		request.state_inv[i] = ~state;
+	}
+
+	uint16_t len = uavcan_kplc_IOStateRequest_encode(&request, &buffer[0]);
+	
+	int16_t result = canardRequestOrRespond(&g_canard,
+		MAIN_MODULE_NODE_ID,
+		UAVCAN_KPLC_IOSTATE_SIGNATURE,
+		UAVCAN_KPLC_IOSTATE_ID,
+		&transfer_id,
+		CANARD_TRANSFER_PRIORITY_MEDIUM,
+		CanardRequest,
+		&buffer[0],
+		(uint16_t)len);
+	
+	if (result < 0) {
+		return (int8_t)result;
+	}
+	
+	return 0;
+}
+
 int8_t ProcessIOState(bool forced)
 {
-	uint16_t a = MCP23S17_A.read();
-	uint16_t b = MCP23S17_B.read();
+	uint16_t raw_a = MCP23S17_A.read();
+	uint16_t raw_b = MCP23S17_B.read();
 	
-	if (forced || a != g_ioStateA || b != g_ioStateB)
+	uint8_t current[3] = {
+		(uint8_t)raw_a,
+		(uint8_t)(raw_a >> 8),
+		(uint8_t)(raw_b >> 8)
+	};
+	
+	uint8_t result[3];
+	memcpy(&result[0], &g_ioState[0], sizeof(g_ioState));
+	
+	uint32_t now = millis();
+	uint32_t timeDiff = now - g_ioStateLpfTimeReference;
+	g_ioStateLpfTimeReference = now;
+	uint8_t diffIsBig = timeDiff >= IOSTATE_LPF_TIME_MS;
+	uint8_t smallDiff = (uint8_t)timeDiff;
+	
+	uint8_t resultUpdated = false;
+	
+	for (int i = 0; i < 3; i++)
 	{
-		g_ioStateA = a;
-		g_ioStateB = b;
-		
-		uint8_t buffer[UAVCAN_KPLC_IOSTATE_REQUEST_MAX_SIZE];
-		static uint8_t transfer_id = 0;
-		
-		uavcan_kplc_IOStateRequest request;
-		request.state[0] = (byte)a;
-		request.state[1] = (byte)(a >> 8);
-		request.state[2] = (byte)b;
-		request.state_inv[0] = ~request.state[0];
-		request.state_inv[1] = ~request.state[1];
-		request.state_inv[2] = ~request.state[2];
-		uint16_t len = uavcan_kplc_IOStateRequest_encode(&request, &buffer[0]);
-		
-		int16_t result = canardRequestOrRespond(&g_canard,
-			MAIN_MODULE_NODE_ID,
-			UAVCAN_KPLC_IOSTATE_SIGNATURE,
-			UAVCAN_KPLC_IOSTATE_ID,
-			&transfer_id,
-			CANARD_TRANSFER_PRIORITY_MEDIUM,
-			CanardRequest,
-			&buffer[0],
-			(uint16_t)len);
-		
-		if (result < 0) {
-			return (int8_t)result;
+		for (int j = 0; i < 8; j++)
+		{
+			uint8_t current_ij = current[i] & _BV(j);
+			if ((g_ioStateStaging[i] & _BV(j)) != current_ij)
+			{
+				g_ioStateStaging[i] = (g_ioStateStaging[i] & ~_BV(j)) | current_ij;
+				
+				if ((result[i] & _BV(j)) == current_ij)
+				{
+					g_ioStateLpfTimeOffsets[i * 8 + j] = IOSTATE_LPF_TIME_OFFSET_UNSET;
+				}
+				else
+				{
+					g_ioStateLpfTimeOffsets[i * 8 + j] = 0;
+				}
+			}
+			else
+			{
+				uint8_t timeOffset = g_ioStateLpfTimeOffsets[i * 8 + j];
+				if (timeOffset == IOSTATE_LPF_TIME_OFFSET_UNSET)
+				{
+					// Nothing to do.
+				}
+				else if (diffIsBig ||
+					smallDiff + timeOffset > IOSTATE_LPF_TIME_MS)
+				{
+					g_ioStateLpfTimeOffsets[i * 8 + j] = IOSTATE_LPF_TIME_OFFSET_UNSET;
+					result[i] = (g_ioStateStaging[i] & ~_BV(j)) | current_ij;
+					resultUpdated = true;
+				}
+				else
+				{
+					g_ioStateLpfTimeOffsets[i * 8 + j] = smallDiff + timeOffset;
+				}
+			}
+		}
+	}
+	
+	if (forced || resultUpdated)
+	{
+		memcpy(&g_ioState[0], &result[0], sizeof(g_ioState));		
+		int8_t ret = sendIOState();
+		if (ret < 0)
+		{
+			return ret;
 		}
 	}
 	
@@ -358,6 +431,10 @@ int main(void)
 	PORTC |= _BV(PORTC5);
 	PORTC |= _BV(PORTD0) | _BV(PORTD1) | _BV(PORTD3) | _BV(PORTD4);
 	PORTE |= _BV(PORTE0);
+	
+	memset(&g_ioStateLpfTimeOffsets, IOSTATE_LPF_TIME_OFFSET_UNSET, sizeof(g_ioStateLpfTimeOffsets));
+	memset(&g_ioState, 0, sizeof(g_ioState));
+	memset(&g_ioStateStaging, 0, sizeof(g_ioStateStaging));
 	
 	int8_t result;
 	
