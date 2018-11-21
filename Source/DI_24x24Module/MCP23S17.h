@@ -31,13 +31,11 @@
 #include "Arduino/SPI.h"
 #include "MCP23S17_registers.h"
 
-#if defined (SPI_HAS_TRANSACTION)
-#if defined (__AVR_ATmega328P__) || defined (__AVR_ATmega328PB__) || defined(__AVR_ATmega32U4__) || defined(__AVR_ATmega324PA__)
 const static uint32_t _MCPMaxSpeed = 8000000UL;
-#else
-const static uint32_t _MCPMaxSpeed = 2000000UL;
-#endif
-#endif
+
+#define REG_READ 1
+#define REG_WRITE 0
+#define OPCODE 0x40
 
 
 /*
@@ -112,10 +110,7 @@ protected:
     inline __attribute__((always_inline))
     void _GPIOstartSend(uint8_t mode)
     {
-#if defined (SPI_HAS_TRANSACTION)
         MCP23S17Tag::SPI->beginTransaction(SPISettings(_MCPMaxSpeed, MSBFIRST, SPI_MODE0));
-#endif
-
         MCP23S17Tag::SetCS();
         mode == 1 ? MCP23S17Tag::SPI->transfer(_readCmd) : MCP23S17Tag::SPI->transfer(_writeCmd);
     }
@@ -126,9 +121,7 @@ protected:
     {
         MCP23S17Tag::ResetCS();
 
-#if defined (SPI_HAS_TRANSACTION)
         MCP23S17Tag::SPI->endTransaction();
-#endif
     }
 
     inline __attribute__((always_inline))
@@ -171,8 +164,8 @@ MCP23S17<MCP23S17Tag>::MCP23S17(const uint8_t haenAdrs)
         _adrs = 0;
         _useHaen = 0;
     }
-    _readCmd = (_adrs << 1) | 1;
-    _writeCmd = _adrs << 1;
+    _readCmd = OPCODE | (_adrs << 1) | REG_READ;
+    _writeCmd = OPCODE | (_adrs << 1) | REG_WRITE;
 }
 
 template <class MCP23S17Tag>
@@ -181,15 +174,10 @@ void MCP23S17<MCP23S17Tag>::initialize(bool protocolInitOverride)
     if (!protocolInitOverride)
     {
         MCP23S17Tag::SPI->begin();
-#if !defined (SPI_HAS_TRANSACTION)
-        MCP23S17Tag::SPI->setClockDivider(SPI_CLOCK_DIV4); // 4 MHz (half speed)
-        MCP23S17Tag::SPI->setBitOrder(MSBFIRST);
-        MCP23S17Tag::SPI->setDataMode(SPI_MODE0);
-#endif
     }
+	
     MCP23S17Tag::InitCS();
-    delay(10);
-
+	
     _useHaen == 1 ? _GPIOwriteByte(MCP23S17_IOCON, 0b00101000) : _GPIOwriteByte(MCP23S17_IOCON, 0b00100000);
     _gpioDirection = 0xFFFF;//all in
     _gpioState = 0xFFFF;//all low 
