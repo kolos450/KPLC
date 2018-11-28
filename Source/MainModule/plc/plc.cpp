@@ -18,6 +18,21 @@ PlcSlaveNodeState g_plcSlaveNodeState[PLC_SLAVE_NODES_LEN]
 uint8_t _state[3];
 uint8_t _isDirty = false;
 
+uint8_t _inputs[8];
+uint8_t _outputs[4];
+
+uint8_t PlcInitialize()
+{
+	_inputs[5] |= 2; // Set E077 true: no limit switches S10, S20, S30.
+	return 0;
+}
+
+int8_t PlcUpdate()
+{
+	UpdateMachine(&_inputs[0], &_outputs[0]);
+	return 0;
+}
+
 int8_t PlcPush(uint8_t nodeId, uavcan_kplc_IOStateRequest state)
 {
 	if (nodeId == NODEID_DI)

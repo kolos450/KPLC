@@ -376,6 +376,11 @@ int main(void)
 		fail(result);
 	}
 	
+	result = PlcInitialize();
+	if (result < 0) {
+		fail(result);
+	}
+	
 	g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL;
 	
 	// Set up MCP2515 interrupt.
@@ -426,6 +431,12 @@ int main(void)
 				g_timers.update();
 				
 				result = ValidateSlavesState();
+				if (result < 0) {
+					fail(result);
+					continue;
+				}
+				
+				result = PlcUpdate();
 				if (result < 0) {
 					fail(result);
 					continue;
