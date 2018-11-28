@@ -23,7 +23,6 @@ uint8_t _outputs[4];
 
 uint8_t PlcInitialize()
 {
-	_inputs[5] |= 2; // Set E077 true: no limit switches S10, S20, S30.
 	return 0;
 }
 
