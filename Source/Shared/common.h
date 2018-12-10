@@ -29,7 +29,7 @@ enum ParamKind
 	ParamKind_Max = 0,
 };
 
-const char ParamKind_NodeState_Name[] PROGMEM = "NodeState";
+const char ParamKind_NodeState_Name[] PROGMEM = "ModuleState";
 const uint8_t ParamKind_Name_MaxLength = 16;
 
 const char* const ParamKind_Names[] =

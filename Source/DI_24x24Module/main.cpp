@@ -38,11 +38,12 @@ int8_t ProcessIOState(bool forced = false);
 
 uint8_t readNodeId()
 {
-	return	((PINC & _BV(PINC5)) >> 5) |
-			((PIND & _BV(PIND0)) << 1) |
-			((PIND & _BV(PIND1)) >> 1) |
-			(PIND & (_BV(PIND3) | _BV(PIND4))) |
-			((PINE & _BV(PINE0)) << 5);
+	uint8_t val =	((PINC & _BV(PINC5)) >> 5) |
+					((PIND & _BV(PIND0)) << 1) |
+					((PIND & _BV(PIND1)) << 1) |
+					(PIND & (_BV(PIND3) | _BV(PIND4))) |
+					((PINE & _BV(PINE0)) << 5);
+	return val ^ 0x3F;
 }
 
 static int8_t handle_KPLC_IOState_Response(CanardRxTransfer* transfer)
@@ -328,16 +329,28 @@ uint8_t sendIOState()
 	return 0;
 }
 
+uint8_t reverse(uint8_t b)
+{
+	b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
+	b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
+	b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
+	return b;
+}
+
 int8_t ProcessIOState(bool forced)
 {
 	uint16_t raw_a = MCP23S17_A.read();
 	uint16_t raw_b = MCP23S17_B.read();
 	
 	uint8_t current[3] = {
-		(uint8_t)raw_a,
-		(uint8_t)(raw_a >> 8),
-		(uint8_t)(raw_b >> 8)
+		reverse(raw_b >> 8),
+		reverse(raw_a >> 8),
+		reverse(raw_a),
 	};
+	
+	uint8_t tmp = current[1];
+	tmp = (tmp & 0xE0) | ((tmp & 0xF) << 1) | ((tmp & 0x10) >> 4);
+	current[1] = tmp;
 	
 	uint8_t result[3];
 	memcpy(&result[0], &g_ioState[0], sizeof(g_ioState));
@@ -352,7 +365,7 @@ int8_t ProcessIOState(bool forced)
 	
 	for (int i = 0; i < 3; i++)
 	{
-		for (int j = 0; i < 8; j++)
+		for (int j = 0; j < 8; j++)
 		{
 			uint8_t current_ij = current[i] & _BV(j);
 			if ((g_ioStateStaging[i] & _BV(j)) != current_ij)
@@ -438,7 +451,7 @@ int main(void)
 	
 	PORTB |= _BV(PORTB1);
 	PORTC |= _BV(PORTC5);
-	PORTC |= _BV(PORTD0) | _BV(PORTD1) | _BV(PORTD3) | _BV(PORTD4);
+	PORTD |= _BV(PORTD0) | _BV(PORTD1) | _BV(PORTD3) | _BV(PORTD4);
 	PORTE |= _BV(PORTE0);
 	
 	memset(&g_ioStateLpfTimeOffsets, IOSTATE_LPF_TIME_OFFSET_UNSET, sizeof(g_ioStateLpfTimeOffsets));
@@ -467,6 +480,8 @@ int main(void)
 	
 	wdt_enable(WDTO_250MS);
 	WDTCSR |= _BV(WDE);
+	
+	sei();
 	
 	while (1)
 	{

@@ -4,6 +4,7 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <avr/wdt.h>
+#include <util/delay.h>
 #include "common.h"
 
 #include "uavcan/kplc/IOState.h"
@@ -21,11 +22,13 @@ Timer<4> g_timers;
 
 uint8_t readNodeId()
 {
-	return	((PINA & _BV(PINA3)) >> 3) |
-			((PINA & _BV(PINA2)) >> 1) |
-			((PINA & _BV(PINA1)) << 1) |
-			((PINA & _BV(PINA0)) << 3) |
-			((PINB & (_BV(PINB0) | _BV(PINB1))) << 4);
+	uint8_t val =	((PINA & _BV(PINA3)) << 2) |
+					((PINA & _BV(PINA2)) << 2) |
+					((PINA & _BV(PINA1)) << 2) |
+					((PINA & _BV(PINA0)) << 2) |
+					((PINB & _BV(PINB0)) << 1) |
+					((PINB & _BV(PINB1)) >> 1);
+	return val ^ 0x3F;
 }
 
 static int8_t ValidateIOStateRequest(uavcan_kplc_IOStateRequest request)
@@ -48,8 +51,8 @@ static int8_t ValidateIOStateRequest(uavcan_kplc_IOStateRequest request)
 static void ApplyIOState(uint8_t* state)
 {
 	PORTA = (PORTA & 0xF) |
-			((state[0] << (4 - 2)) & _BV(5)) |
-			((state[0] << (5 - 1)) & _BV(6)) |
+			((state[0] << (4 - 2)) & _BV(4)) |
+			((state[0] << (5 - 1)) & _BV(5)) |
 			((state[0] << (6 - 0)) & _BV(6)) |
 			((state[0] << (7 - 5)) & _BV(7));
 			
@@ -328,10 +331,20 @@ ISR(INT2_vect)
 	handleCanRxInterrupt();
 }
 
+void setLed()
+{
+	PORTB |= _BV(PORTB4);
+}
+
+void resetLed()
+{
+	PORTB &= ~_BV(PORTB4);
+}
+
 int main(void)
 {
 	DDRA = _BV(PORTA4) | _BV(PORTA5) | _BV(PORTA6) | _BV(PORTA7);
-	DDRB |= _BV(PORTB3); // MCP2515 Reset
+	DDRB |= _BV(PORTB3) | _BV(PORTB4); // MCP2515 Reset
 	DDRC = 0xFF;
 	DDRD = 0xFF;
 	
@@ -339,6 +352,7 @@ int main(void)
 	PORTB |= _BV(PORTB0) | _BV(PORTB1) | _BV(PORTB3);
 	
 	int8_t result;
+	
 	result = setup();
 	if (result < 0) {
 		fail(result);
@@ -347,11 +361,13 @@ int main(void)
 	g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL;
 	
 	// Set up MCP2515 interrupt.
-	EICRA = _BV(ISC21);	// Trigger INT2 on falling edge
-	EIMSK = _BV(INT2);	// Enable INT2
+	EICRA |= _BV(ISC21);	// Trigger INT2 on falling edge
+	EIMSK |= _BV(INT2);	// Enable INT2
 	
 	wdt_enable(WDTO_250MS);
 	WDTCSR |= _BV(WDE);
+	
+	sei();
 	
 	while (1)
 	{
@@ -402,6 +418,17 @@ int main(void)
 				
 				wdt_disable();
 				cli();
+				
+				resetLed();
+				_delay_ms(1000);
+				
+				for (int i = 0; i < g_failureReason; i++) {
+					setLed();
+					_delay_ms(300);
+					resetLed();
+					_delay_ms(300);
+				}
+				
 				break;
 			}
 		}

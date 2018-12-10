@@ -4,7 +4,7 @@
 #define F_CPU 16000000UL
 #define CAN_SPEED 125000
 
-#define CANARD_NODESTATUS_PERIOD_MSEC    500
+#define CANARD_NODESTATUS_PERIOD_MSEC    100
 
 #define APP_VERSION_MAJOR                       1
 #define APP_VERSION_MINOR                       0
