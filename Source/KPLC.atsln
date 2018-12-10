@@ -3,8 +3,6 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Atmel Studio Solution File, Format Version 11.00
 VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "MainModule", "MainModule\MainModule.cppproj", "{8BDD20CB-2714-4C18-92CA-154FDBF58EFC}"
-EndProject
 Project("{E66E83B9-2572-4076-B26E-6BE79FF3018A}") = "DI_24x24Module", "DI_24x24Module\DI_24x24Module.cppproj", "{DCE6C7E3-EE26-4D79-826B-08594B9AD897}"
 EndProject
 Project("{E66E83B9-2572-4076-B26E-6BE79FF3018A}") = "DO_OE_24x20Module", "DO_OE_24x20Module\DO_OE_24x20Module.cppproj", "{F17B6008-05A3-490B-B8C9-6C14421FF349}"
@@ -15,10 +13,6 @@ Global
 		Release|AVR = Release|AVR
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{8BDD20CB-2714-4C18-92CA-154FDBF58EFC}.Debug|AVR.ActiveCfg = Debug|AVR
-		{8BDD20CB-2714-4C18-92CA-154FDBF58EFC}.Debug|AVR.Build.0 = Debug|AVR
-		{8BDD20CB-2714-4C18-92CA-154FDBF58EFC}.Release|AVR.ActiveCfg = Release|AVR
-		{8BDD20CB-2714-4C18-92CA-154FDBF58EFC}.Release|AVR.Build.0 = Release|AVR
 		{DCE6C7E3-EE26-4D79-826B-08594B9AD897}.Debug|AVR.ActiveCfg = Debug|AVR
 		{DCE6C7E3-EE26-4D79-826B-08594B9AD897}.Debug|AVR.Build.0 = Debug|AVR
 		{DCE6C7E3-EE26-4D79-826B-08594B9AD897}.Release|AVR.ActiveCfg = Release|AVR
