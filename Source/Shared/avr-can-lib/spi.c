@@ -106,10 +106,18 @@ uint8_t spi_putc(uint8_t data)
 	
 	#else
 	
-	// put byte in send-buffer
+	// Put byte in send-buffer.
 	SPDR0 = data;
 	
-	// wait until byte was send
+	/*
+     * The following NOP introduces a small delay that can prevent the wait
+     * loop form iterating when running at the maximum speed. This gives
+     * about 10% more speed, even if it seems counter-intuitive. At lower
+     * speeds it is unnoticed.
+     */
+    asm volatile("nop");
+	
+	// Wait until byte was send.
 	while( !( SPSR0 & (1<<SPIF0) ) )
 		;
 	

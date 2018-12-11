@@ -66,7 +66,7 @@
 // load some default values
 
 #ifndef SPI_PRESCALER
-	#define	SPI_PRESCALER			8
+	#define	SPI_PRESCALER			4
 #endif
 
 // ----------------------------------------------------------------------------

@@ -119,17 +119,11 @@ int canardAVRTransmit(const CanardCANFrame* frame)
 
 int canardAVRReceive(CanardCANFrame* out_frame)
 {
-    const int poll_result = can_check_message();
-    if (poll_result <= 0)
-    {
-        return 0;
-    }
-
     can_t receive_msg;
     const uint8_t res = can_get_message(&receive_msg);
     if (res <= 0)
     {
-        return -1;
+	    return 0;
     }
 
     out_frame->id = receive_msg.id;

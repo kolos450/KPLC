@@ -1,4 +1,5 @@
 #include "common.h"
+#include "avr-can-lib/can.h"
 
 uint8_t g_nodeStatusHealth = UAVCAN_PROTOCOL_NODESTATUS_HEALTH_OK;
 uint8_t g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_INITIALIZATION;
@@ -176,7 +177,8 @@ int8_t sendCanard(void)
 	return 0;
 }
 
-#define RX_FRAME_BUFFER_LENGTH 4
+// REM: sizeof(CanardCANFrame) == 13
+#define RX_FRAME_BUFFER_LENGTH 16
 static CanardCANFrame rx_frame_buffer[RX_FRAME_BUFFER_LENGTH];
 static CanardCANFrame rx_frame_buffer_copy[RX_FRAME_BUFFER_LENGTH];
 static uint8_t rx_frame_buffer_count = 0;
@@ -185,21 +187,41 @@ void handleCanRxInterrupt()
 {
 	while (1)
 	{
-		CanardCANFrame rx_frame;
-		int res = canardAVRReceive(&rx_frame);
+		int res = canardAVRReceive(&(rx_frame_buffer[rx_frame_buffer_count]));
 		if (res == 0)
 		{
 			return;
 		}
 		
+		rx_frame_buffer_count++;
+		 
+		// TODO: 13 bytes are lost here.
 		if (rx_frame_buffer_count == RX_FRAME_BUFFER_LENGTH)
 		{
 			fail(-FailureReason_RXBufferOverflow);
 		}
-		
-		rx_frame_buffer[rx_frame_buffer_count] = rx_frame;
-		rx_frame_buffer_count++;
 	}
+}
+
+int8_t validateTransceiverState()
+{
+	uint8_t canErrorFlags = can_read_error_flags();
+	if (canErrorFlags) {
+		if (canErrorFlags & 0x04) {
+			return -FailureReason_MCP2515_ErrorWarning;
+		}
+		else if (canErrorFlags & 0x08) {
+			return -FailureReason_MCP2515_DataOverrun;
+		}
+		else if (canErrorFlags & 0x20) {
+			return -FailureReason_MCP2515_PassiveError;
+		}
+		else if (canErrorFlags & 0x80) {
+			return -FailureReason_MCP2515_BusError;
+		}
+	}
+	
+	return 0;
 }
 
 void receiveCanard(void)
@@ -262,4 +284,41 @@ ParamKind parseParamKind(char* name, int len)
 	}
 	
 	return (ParamKind)-1;
+}
+
+int8_t validateMasterNodeStatus(uavcan_protocol_NodeStatus status)
+{
+	switch (g_nodeState)
+	{
+		case NodeState_Initial:
+		case NodeState_Error:
+		{
+			break;
+		}
+		
+		case NodeState_Operational:
+		{
+			if (status.health != UAVCAN_PROTOCOL_NODESTATUS_HEALTH_OK)
+			{
+				return -FailureReason_BadNodeStatus;
+			}
+			if (status.mode != UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL)
+			{
+				return -FailureReason_BadNodeStatus;
+			}
+			if (status.vendor_specific_status_code != NodeState_Operational)
+			{
+				return -FailureReason_MasterStateValidationError;
+			}
+			break;
+		}
+		
+		default:
+		{
+			fail(-FailureReason_InvalidArgument);
+			break;
+		}
+	}
+	
+	return 0;
 }

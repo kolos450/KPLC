@@ -514,6 +514,9 @@ can_reset_bus_off(void);
 extern void
 can_set_mode(can_mode_t mode);
 
+extern uint8_t
+can_read_error_flags(void);
+
 #if defined (__cplusplus)
 }
 #endif

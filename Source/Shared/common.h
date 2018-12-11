@@ -59,6 +59,11 @@ enum FailureReason
 	FailureReason_SlavesStateValidationError = 14,
 	FailureReason_MasterStateValidationError = 15,
 	FailureReason_RXBufferOverflow = 16,
+	FailureReason_LowPower = 17,
+	FailureReason_MCP2515_ErrorWarning = 18,
+	FailureReason_MCP2515_DataOverrun = 19,
+	FailureReason_MCP2515_PassiveError = 20,
+	FailureReason_MCP2515_BusError = 21,
 };
 
 #define GET_MICROS (uint64_t)millis() * 1000ULL
@@ -94,3 +99,7 @@ int8_t handle_protocol_GetNodeInfo(CanardRxTransfer* transfer);
 void handleCanRxInterrupt();
 
 uint8_t readNodeId();
+
+int8_t validateMasterNodeStatus(uavcan_protocol_NodeStatus status);
+
+int8_t validateTransceiverState();

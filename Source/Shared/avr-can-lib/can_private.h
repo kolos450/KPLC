@@ -84,6 +84,7 @@
 		#define mcp2515_send_message(...)			can_send_message(__VA_ARGS__)
 		#define	mcp2515_read_error_register(...)	can_read_error_register(__VA_ARGS__)
 		#define	mcp2515_set_mode(...)				can_set_mode(__VA_ARGS__)
+		#define	mcp2515_read_error_flags(...)		can_read_error_flags(__VA_ARGS__)
 
 	#elif (BUILD_FOR_AT90CAN == 1)
 

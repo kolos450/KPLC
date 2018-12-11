@@ -173,7 +173,7 @@ bool mcp2515_init(can_bitrate_t bitrate)
 {
 	if (bitrate >= 8)
 		return false;
-	
+		
 	SET(MCP2515_CS);
 	SET_OUTPUT(MCP2515_CS);
 	
@@ -202,15 +202,12 @@ bool mcp2515_init(can_bitrate_t bitrate)
 	_delay_ms(10);
 	
 	// CNF1..3 Register laden (Bittiming)
-	RESET(MCP2515_CS);
-	spi_putc(SPI_WRITE);
-	spi_putc(CNF3);
-	for (uint8_t i=0; i<3 ;i++ ) {
-		spi_putc(pgm_read_byte(&_mcp2515_cnf[bitrate][i]));
-	}
+	mcp2515_write_register(CNF3, pgm_read_byte(&_mcp2515_cnf[bitrate][0]));
+	mcp2515_write_register(CNF2, pgm_read_byte(&_mcp2515_cnf[bitrate][1]));
+	mcp2515_write_register(CNF1, pgm_read_byte(&_mcp2515_cnf[bitrate][2]));
+	
 	// aktivieren/deaktivieren der Interrupts
-	spi_putc(MCP2515_INTERRUPTS);
-	SET(MCP2515_CS);
+	mcp2515_write_register(CANINTE, MCP2515_INTERRUPTS);
 	
 	// TXnRTS Bits als Inputs schalten
 	mcp2515_write_register(TXRTSCTRL, 0);
@@ -247,8 +244,7 @@ bool mcp2515_init(can_bitrate_t bitrate)
 		error = true;
 	}
 	
-	// Device zurueck in den normalen Modus versetzten
-	// und aktivieren/deaktivieren des Clkout-Pins
+	// Switch the device back to normal mode and enable/disable the CLKOUT pin.
 	mcp2515_write_register(CANCTRL, CLKOUT_PRESCALER_);
 	
 	if (error) {
@@ -257,11 +253,24 @@ bool mcp2515_init(can_bitrate_t bitrate)
 	else
 	{
 		while ((mcp2515_read_register(CANSTAT) & 0xe0) != 0) {
-			// warten bis der neue Modus uebernommen wurde
+			// Wait until the new mode has been applied.
 		}
 		
 		return true;
 	}
+}
+
+uint8_t mcp2515_read_error_flags()
+{
+	unsigned char flags = mcp2515_read_register(EFLG);
+	unsigned char status = 0;
+
+	if (flags & 0x07) status |= 0x04; // error warning
+	if (flags & 0xC0) status |= 0x08; // data overrun
+	if (flags & 0x18) status |= 0x20; // passive error
+	if (flags & 0x20) status |= 0x80; // bus error
+	
+	return status;
 }
 
 #endif	// SUPPORT_FOR_MCP2515__
