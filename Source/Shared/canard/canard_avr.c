@@ -75,7 +75,6 @@ int canardAVRInit(uint32_t bitrate)
         .id = 0,
         .mask = 0,
         .flags = {
-            .rtr = 0,
             .extended = 0
         }
     };
@@ -150,7 +149,6 @@ int canardAVRConfigureAcceptanceFilters(uint8_t node_id)
         .id = DefaultFilterMsgID,
         .mask = DefaultFilterMsgMask,
         .flags = {
-            .rtr = 0,
             .extended = 3
         }
     };
@@ -160,7 +158,6 @@ int canardAVRConfigureAcceptanceFilters(uint8_t node_id)
         .id = ((uint32_t)node_id << 8) | 0x80,
         .mask = DefaultFilterSrvMask,
         .flags = {
-            .rtr = 0,
             .extended = 3
         }
     };

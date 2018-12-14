@@ -43,7 +43,7 @@
 /**
  * \ingroup		communication
  * \defgroup 	can_interface Universelles CAN Interface
- * \brief		allgemeines CAN Interface für AT90CAN32/64/128, MCP2515 und SJA1000
+ * \brief		allgemeines CAN Interface für MCP2515
  *
  * \author 		Fabian Greif <fabian.greif@rwth-aachen.de>
  * \author      Roboterclub Aachen e.V. (http://www.roboterclub.rwth-aachen.de)
@@ -62,7 +62,7 @@
 
 // ----------------------------------------------------------------------------
 /** \ingroup	can_interface
- *  \name		Bitdefinitionen
+ *  \name		Bit Definitions
  */
 //@{
 #define	ONLY_NON_RTR		2
@@ -70,40 +70,31 @@
 //@}
 
 /** \ingroup	can_interface
- *  \brief		Bitraten fuer den CAN-Bus 
+ *  \brief		CAN bitrates 
  */
 typedef enum {
-	BITRATE_10_KBPS	= 0,	// ungetestet
-	BITRATE_20_KBPS	= 1,	// ungetestet
-	BITRATE_50_KBPS	= 2,	// ungetestet
-	BITRATE_100_KBPS = 3,	// ungetestet
+	BITRATE_10_KBPS	= 0,	// untested
+	BITRATE_20_KBPS	= 1,	// untested
+	BITRATE_50_KBPS	= 2,	// untested
+	BITRATE_100_KBPS = 3,	// untested
 	BITRATE_125_KBPS = 4,
-	BITRATE_250_KBPS = 5,	// ungetestet
-	BITRATE_500_KBPS = 6,	// ungetestet
-	BITRATE_1_MBPS = 7,		// ungetestet
+	BITRATE_250_KBPS = 5,	// untested
+	BITRATE_500_KBPS = 6,	// untested
+	BITRATE_1_MBPS = 7,		// untested
 } can_bitrate_t;
 
 /**
  * \ingroup	    can_interface
- * \brief		Symbol um auf alle Filter zuzugreifen
+ * \brief		All filters access shortcut
  */
 #define	CAN_ALL_FILTER		0xff
 
 /**
  * \ingroup	    can_interface
- * \brief		Unterstuetzung fuer Extended-IDs aktivieren
+ * \brief		Enable support for Extended IDs
  */
 #ifndef	SUPPORT_EXTENDED_CANID
 	#define	SUPPORT_EXTENDED_CANID	1
-#endif
-
-/**
- * \ingroup     can_interface
- * \brief		Unterstützung für Zeitstempel aktivieren
- * \warning     Wird nur vom AT90CANxxx unterstützt
- */
-#ifndef	SUPPORT_TIMESTAMPS
-	#define	SUPPORT_TIMESTAMPS		0
 #endif
 
 /**
@@ -183,10 +174,6 @@ typedef struct
 	
 	uint8_t length;				//!< Anzahl der Datenbytes
 	uint8_t data[8];			//!< Die Daten der CAN Nachricht
-	
-	#if SUPPORT_TIMESTAMPS
-		uint16_t timestamp;
-	#endif
 } can_t;
 
 
@@ -194,32 +181,17 @@ typedef struct
 // ----------------------------------------------------------------------------
 /**
  * \ingroup	can_interface
- * \brief	Datenstruktur zur Aufnahme von CAN-Filtern
+ * \brief	Data structure for CAN filters setup.
  *
  * \code
- *  rtr | Funtion
+ *  ext | Function
  * -----|------
- *  00  | alle Nachrichten unabhaengig vom RTR-Bit
- *  01  | ungültig
- *  10  | empfange nur nicht RTR-Nachrichten
- *  11  | empfange nur Nachrichten mit gesetzem RTR-Bit
+ *  00  | accept all
+ *  01  | reserved
+ *  10  | accept standart frames only
+ *  11  | accept extended frames only
  * \endcode
  *
- * \b ACHTUNG:
- * Funktioniert nur mit dem AT90CAN, beim MCP2515 wird der Parameter ignoriert. 
- *
- * \code
- *  ext | Funtion
- * -----|------
- *  00  | alle Nachrichten
- *  01  | ungueltig
- *  10  | empfange nur Standard-Nachrichten
- *  11  | empfange nur Extended-Nachrichten
- * \endcode
- *
- * \warning	Filter sind beim SJA1000 nur begrenzt nutzbar, man sollte ihn nur
- * 			in Systemen mit entweder Standard- oder Extended-Frames einsetzten,
- * 			aber nicht beidem zusammen.
  */
 
 typedef struct
@@ -228,15 +200,11 @@ typedef struct
 		uint32_t id;				//!< ID der Nachricht (11 oder 29 Bit)
 		uint32_t mask;				//!< Maske
 		struct {
-			uint8_t rtr : 2;		//!< Remote Request Frame
 			uint8_t extended : 2;	//!< extended ID
 		} flags;
 	#else
 		uint16_t id;				//!< ID der Nachricht 11 Bits
 		uint16_t mask;				//!< Maske
-			struct {
-			uint8_t rtr : 2;		//!< Remote Request Frame
-		} flags;
 	#endif
 } can_filter_t;
 
@@ -344,20 +312,6 @@ can_set_filter(uint8_t number, const can_filter_t *filter);
 // ----------------------------------------------------------------------------
 /**
  * \ingroup	can_interface
- * \brief	Filter deaktivieren
- *
- * \param	number	Nummer des Filters der deaktiviert werden soll,
- *			0xff deaktiviert alle Filter.
- * \return	false falls ein Fehler auftrat, true ansonsten
- *
- * \warning Wird nur vom AT90CAN32/64/128 unterstuetzt.
- */
-extern bool
-can_disable_filter(uint8_t number);
-
-// ----------------------------------------------------------------------------
-/**
- * \ingroup	can_interface
  * \brief	Setzt die Werte für alle Filter
  *
  * \code
@@ -402,20 +356,8 @@ can_static_filter(const uint8_t *filter_array);
  * \param	*filter	Pointer in den die Filterstruktur geschrieben wird
  *
  * \return	\b 0 falls ein Fehler auftrat, \
- *			\b 1 falls der Filter korrekt gelesen werden konnte, \
- *			\b 2 falls der Filter im Moment nicht verwendet wird (nur AT90CAN), \
- *			\b 0xff falls gerade keine Aussage moeglich ist (nur AT90CAN).
+ *			\b 1 falls der Filter korrekt gelesen werden konnte.
  *
- * \warning	Da der SJA1000 nicht feststellen kann ob der ausgelesene Filter
- *			nun zwei 11-Bit Filter oder ein 29-Bit Filter ist werden nicht
- *			die Filter sondern die Registerinhalte direkt zurück gegeben.
- *			Der Programmierer muss dann selbst entscheiden was er mit den 
- * 			Werten macht.
- *
- * \~english
- * \warning SJA1000 doesn't return the filter and id directly but the content
- *			of the corresponding registers because it is not possible to
- *			check the type of the filter.
  */
 extern uint8_t
 can_get_filter(uint8_t number, can_filter_t *filter);
@@ -476,33 +418,6 @@ can_get_message(can_t *msg);
  */
 extern can_error_register_t
 can_read_error_register(void);
-
-// ----------------------------------------------------------------------------
-/**
- * \ingroup can_interface
- *
- * \~german
- * \brief   Überprüft ob der CAN Controller im Bus-Off-Status
- *
- * \return  true wenn der Bus-Off-Status aktiv ist, false ansonsten
- *
- * \warning aktuell nur auf dem SJA1000
- */
-extern bool
-can_check_bus_off(void);
-
-// ----------------------------------------------------------------------------
-/**
- * \ingroup	can_interface
- *
- * \~german
- * \brief	Setzt einen Bus-Off Status zurück und schaltet den CAN Controller
- *			wieder aktiv
- *
- * \warning	aktuell nur auf dem SJA1000
- */
-extern void
-can_reset_bus_off(void);
 
 // ----------------------------------------------------------------------------
 /**

@@ -55,38 +55,36 @@
 
 // ----------------------------------------------------------------------------
 
-#if (BUILD_FOR_MCP2515 == 1)
-	#if defined(__AVR_ATmega16__) || defined(__AVR_ATmega32__) || defined(__AVR_ATmega644__) || defined(__AVR_ATmega324PA__)
-		#define	P_MOSI	B,5
-		#define	P_MISO	B,6
-		#define	P_SCK	B,7
-		#define	SUPPORT_FOR_MCP2515__
-	#elif defined(__AVR_AT90USB82__) || defined(__AVR_AT90USB162__)
-		#define P_MOSI  B,2
-		#define P_MISO  B,3
-		#define P_SCK   B,1
-		#define SUPPORT_FOR_MCP2515__
-	#elif defined(__AVR_ATmega8__)  || defined(__AVR_ATmega48__) || \
-		  defined(__AVR_ATmega88__) || defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328PB__)
-		#define	P_MOSI	B,3
-		#define	P_MISO	B,4
-		#define	P_SCK	B,5
-		#define	SUPPORT_FOR_MCP2515__
-	#elif defined(__AVR_ATmega128__)
-		#define	P_MOSI	B,2
-		#define	P_MISO	B,3
-		#define	P_SCK	B,1
-		#define	SUPPORT_FOR_MCP2515__
-	#elif defined(__AVR_ATtiny45__) || defined(__AVR_ATtiny85__)
-		#define	P_MOSI	B,0
-		#define	P_MISO	B,1
-		#define	P_SCK	B,2
+#if defined(__AVR_ATmega16__) || defined(__AVR_ATmega32__) || defined(__AVR_ATmega644__) || defined(__AVR_ATmega324PA__)
+	#define	P_MOSI	B,5
+	#define	P_MISO	B,6
+	#define	P_SCK	B,7
+	#define	SUPPORT_FOR_MCP2515__
+#elif defined(__AVR_AT90USB82__) || defined(__AVR_AT90USB162__)
+	#define P_MOSI  B,2
+	#define P_MISO  B,3
+	#define P_SCK   B,1
+	#define SUPPORT_FOR_MCP2515__
+#elif defined(__AVR_ATmega8__)  || defined(__AVR_ATmega48__) || \
+		defined(__AVR_ATmega88__) || defined(__AVR_ATmega168__) || defined(__AVR_ATmega328P__) || defined(__AVR_ATmega328PB__)
+	#define	P_MOSI	B,3
+	#define	P_MISO	B,4
+	#define	P_SCK	B,5
+	#define	SUPPORT_FOR_MCP2515__
+#elif defined(__AVR_ATmega128__)
+	#define	P_MOSI	B,2
+	#define	P_MISO	B,3
+	#define	P_SCK	B,1
+	#define	SUPPORT_FOR_MCP2515__
+#elif defined(__AVR_ATtiny45__) || defined(__AVR_ATtiny85__)
+	#define	P_MOSI	B,0
+	#define	P_MISO	B,1
+	#define	P_SCK	B,2
 		
-		#define	USE_SOFTWARE_SPI		1
-		#define	SUPPORT_FOR_MCP2515__
-	#else
-		#error	choosen AVR-type is not supported yet!
-	#endif
+	#define	USE_SOFTWARE_SPI		1
+	#define	SUPPORT_FOR_MCP2515__
+#else
+	#error	choosen AVR-type is not supported yet!
 #endif
 
 
@@ -103,7 +101,6 @@
 #endif
 
 // ----------------------------------------------------------------------------
-// TODO: this file is imcompatible with the at90can
 #include "mcp2515_defs.h"
 
 #ifndef	MCP2515_CS

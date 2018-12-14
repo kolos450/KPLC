@@ -19,24 +19,6 @@
  */
 #define SUPPORT_EXTENDED_CANID  1
 
-/* Select if you want to use timestamps.
- * Timestamps are sourced from a register internal to the AT90CAN.
- * Selecting them on any other controller will have no effect, they will
- * be 0 all the time.
- */
-#define SUPPORT_TIMESTAMPS              0
-
-
-// -----------------------------------------------------------------------------
-/* Global settings for building the can-lib.
- *
- * Select ONE CAN controller for which you are building the can-lib.
- */
-#define SUPPORT_MCP2515                 1
-#define SUPPORT_AT90CAN                 0
-#define SUPPORT_SJA1000                 0
-
-
 // -----------------------------------------------------------------------------
 /* Setting for MCP2515
  *

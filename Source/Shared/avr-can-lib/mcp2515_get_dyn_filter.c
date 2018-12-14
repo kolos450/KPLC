@@ -65,7 +65,6 @@ uint8_t mcp2515_get_filter(uint8_t number, can_filter_t *filter)
 		#if SUPPORT_EXTENDED_CANID
 		filter->flags.extended = 0;
 		#endif
-		filter->flags.rtr = 0;
 		filter->mask = 0;
 		filter->id = 0;
 		
