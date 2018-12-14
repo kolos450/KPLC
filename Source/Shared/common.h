@@ -97,6 +97,8 @@ void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer);
 int8_t handle_protocol_GetNodeInfo(CanardRxTransfer* transfer);
 
 void handleCanRxInterrupt();
+void enableCanRxInterrupt();
+void disableCanRxInterrupt();
 
 uint8_t readNodeId();
 

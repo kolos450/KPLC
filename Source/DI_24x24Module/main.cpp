@@ -428,6 +428,16 @@ ISR(INT0_vect)
 	handleCanRxInterrupt();
 }
 
+void enableCanRxInterrupt()
+{
+	EIMSK |= _BV(INT0);
+}
+
+void disableCanRxInterrupt()
+{
+	EIMSK &= ~_BV(INT0);
+}
+
 int main(void)
 {	
 	DDRD |= _BV(PORTD6); // LED

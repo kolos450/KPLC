@@ -122,6 +122,8 @@ int8_t setup(void)
 	
 	arduino_init();
 	
+	disableCanRxInterrupt();
+	
 	result = canardAVRInit(CAN_SPEED);
 	if (result) {
 		return -FailureReason_CannotInit;
@@ -161,7 +163,9 @@ int8_t sendCanard(void)
 	const CanardCANFrame* txf = canardPeekTxQueue(&g_canard);
 	while (txf)
 	{
+		disableCanRxInterrupt();
 		const int tx_res = canardAVRTransmit(txf);
+		enableCanRxInterrupt();
 		if (tx_res < 0)
 		{
 			// Failure - drop the frame and report.
@@ -231,14 +235,14 @@ void receiveCanard(void)
 		return;
 	}
 	
-	cli();
+	disableCanRxInterrupt();
 	uint8_t framesNum = rx_frame_buffer_count;
 	for (uint8_t i = 0; i < framesNum; i++)
 	{
 		rx_frame_buffer_copy[i] = rx_frame_buffer[i];
 	}
 	rx_frame_buffer_count = 0;
-	sei();
+	enableCanRxInterrupt();
 	
 	for (uint8_t i = 0; i < framesNum; i++)
 	{

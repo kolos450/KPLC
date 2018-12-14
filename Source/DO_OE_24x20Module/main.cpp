@@ -315,6 +315,16 @@ ISR(INT2_vect)
 	handleCanRxInterrupt();
 }
 
+void enableCanRxInterrupt()
+{
+	EIMSK |= _BV(INT2);
+}
+
+void disableCanRxInterrupt()
+{
+	EIMSK &= ~_BV(INT2);
+}
+
 void setLed()
 {
 	PORTB |= _BV(PORTB4);
@@ -346,7 +356,7 @@ int main(void)
 	
 	// Set up MCP2515 interrupt.
 	EICRA |= _BV(ISC21);	// Trigger INT2 on falling edge
-	EIMSK |= _BV(INT2);	// Enable INT2
+	EIMSK |= _BV(INT2);		// Enable INT2
 	
 	wdt_enable(WDTO_250MS);
 	WDTCSR |= _BV(WDE);
