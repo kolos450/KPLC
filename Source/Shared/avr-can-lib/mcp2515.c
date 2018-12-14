@@ -273,4 +273,9 @@ uint8_t mcp2515_read_error_flags()
 	return status;
 }
 
+void mcp2515_reset_error_flags()
+{
+	mcp2515_write_register(EFLG, 0);
+}
+
 #endif	// SUPPORT_FOR_MCP2515__

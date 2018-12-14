@@ -363,6 +363,8 @@ int main(void)
 	
 	sei();
 	
+	resetTransceiverState();
+	
 	while (1)
 	{
 		wdt_reset();

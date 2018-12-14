@@ -209,7 +209,9 @@ void handleCanRxInterrupt()
 
 int8_t validateTransceiverState()
 {
+	disableCanRxInterrupt();
 	uint8_t canErrorFlags = can_read_error_flags();
+	enableCanRxInterrupt();
 	if (canErrorFlags) {
 		if (canErrorFlags & 0x04) {
 			return -FailureReason_MCP2515_ErrorWarning;
@@ -226,6 +228,13 @@ int8_t validateTransceiverState()
 	}
 	
 	return 0;
+}
+
+void resetTransceiverState()
+{
+	disableCanRxInterrupt();
+	can_reset_error_flags();
+	enableCanRxInterrupt();
 }
 
 void receiveCanard(void)

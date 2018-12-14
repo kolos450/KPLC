@@ -105,3 +105,4 @@ uint8_t readNodeId();
 int8_t validateMasterNodeStatus(uavcan_protocol_NodeStatus status);
 
 int8_t validateTransceiverState();
+void resetTransceiverState();
