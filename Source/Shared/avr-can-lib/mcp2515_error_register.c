@@ -42,4 +42,14 @@ can_error_register_t mcp2515_read_error_register(void)
 	return error;
 }
 
+can_error_flags_t mcp2515_read_error_flags()
+{
+	return mcp2515_read_register(EFLG);
+}
+
+void mcp2515_reset_error_flags()
+{
+	mcp2515_write_register(EFLG, 0);
+}
+
 #endif	// SUPPORT_FOR_MCP2515__

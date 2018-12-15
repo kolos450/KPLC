@@ -212,18 +212,21 @@ int8_t validateTransceiverState()
 	disableCanRxInterrupt();
 	uint8_t canErrorFlags = can_read_error_flags();
 	enableCanRxInterrupt();
-	if (canErrorFlags) {
-		if (canErrorFlags & 0x04) {
-			return -FailureReason_MCP2515_ErrorWarning;
+	
+	if (canErrorFlags)
+	{
+		// Handle a service frame buffer overflow error only.
+		if (canErrorFlags & CanErrorFlags_Rx1Overflow)
+		{
+			return -FailureReason_CAN_DataOverrun;
 		}
-		else if (canErrorFlags & 0x08) {
-			return -FailureReason_MCP2515_DataOverrun;
-		}
-		else if (canErrorFlags & 0x20) {
-			return -FailureReason_MCP2515_PassiveError;
-		}
-		else if (canErrorFlags & 0x80) {
-			return -FailureReason_MCP2515_BusError;
+		else if (canErrorFlags
+			& (CanErrorFlags_ErrorWarning
+			| CanErrorFlags_RxWarning | CanErrorFlags_TxWarning
+			| CanErrorFlags_RxErrorPassive | CanErrorFlags_TxErrorPassive
+			| CanErrorFlags_TxBusOff))
+		{
+			return -FailureReason_CAN_BusError;
 		}
 	}
 	

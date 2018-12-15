@@ -429,7 +429,18 @@ can_read_error_register(void);
 extern void
 can_set_mode(can_mode_t mode);
 
-extern uint8_t
+typedef enum {
+	CanErrorFlags_Rx1Overflow		= 0x80,
+	CanErrorFlags_Rx0Overflow		= 0x40,
+	CanErrorFlags_TxBusOff			= 0x20,
+	CanErrorFlags_TxErrorPassive	= 0x10,
+	CanErrorFlags_RxErrorPassive	= 0x08,
+	CanErrorFlags_TxWarning			= 0x04,
+	CanErrorFlags_RxWarning			= 0x02,
+	CanErrorFlags_ErrorWarning		= 0x01
+} can_error_flags_t;
+
+extern can_error_flags_t
 can_read_error_flags(void);
 
 extern void

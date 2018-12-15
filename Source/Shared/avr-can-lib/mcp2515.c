@@ -260,22 +260,4 @@ bool mcp2515_init(can_bitrate_t bitrate)
 	}
 }
 
-uint8_t mcp2515_read_error_flags()
-{
-	unsigned char flags = mcp2515_read_register(EFLG);
-	unsigned char status = 0;
-
-	if (flags & 0x07) status |= 0x04; // error warning
-	if (flags & 0xC0) status |= 0x08; // data overrun
-	if (flags & 0x18) status |= 0x20; // passive error
-	if (flags & 0x20) status |= 0x80; // bus error
-	
-	return status;
-}
-
-void mcp2515_reset_error_flags()
-{
-	mcp2515_write_register(EFLG, 0);
-}
-
 #endif	// SUPPORT_FOR_MCP2515__
