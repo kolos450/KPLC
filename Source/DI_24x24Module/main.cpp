@@ -328,13 +328,13 @@ int8_t ProcessIOState(bool forced)
 	
 	uint8_t current[3] = {
 		(uint8_t)~reverse(raw_b >> 8),
-		(uint8_t)~reverse(raw_a >> 8),
+		reverse(raw_a >> 8),
 		(uint8_t)~reverse(raw_a),
 	};
 	
 	uint8_t tmp = current[1];
 	tmp = (tmp & 0xE0) | ((tmp & 0xF) << 1) | ((tmp & 0x10) >> 4);
-	current[1] = tmp;
+	current[1] = ~tmp;
 	
 	uint8_t result[3];
 	memcpy(&result[0], &g_ioState[0], sizeof(g_ioState));
@@ -410,19 +410,6 @@ void resetLed()
 	PORTD &= ~_BV(PORTD6);
 }
 
-bool swapLedState;
-void swapLed(uint8_t _)
-{
-	if (!swapLedState) {
-		setLed();
-		swapLedState = true;
-	}
-	else {
-		resetLed();
-		swapLedState = false;
-	}
-}
-
 ISR(INT0_vect)
 {
 	handleCanRxInterrupt();
@@ -466,7 +453,7 @@ int main(void)
 	
 	g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL;
 	
-	g_timers.every(500, swapLed);
+	setLed();
 	
 	// Set up MCP2515 interrupt.
 	EICRA = _BV(ISC01);	// Trigger INT0 on falling edge

@@ -50,21 +50,25 @@ static int8_t ValidateIOStateRequest(uavcan_kplc_IOStateRequest request)
 //  3   PC6	   7   PC4     11  PC2     15  PD5     19  PD1
 static void ApplyIOState(uint8_t* state)
 {
+	uint8_t stateA = state[2];
+	uint8_t stateB = state[1];
+	uint8_t stateC = state[0];
+	
 	PORTA = (PORTA & 0xF) |
-			((state[0] << (4 - 2)) & _BV(4)) |
-			((state[0] << (5 - 1)) & _BV(5)) |
-			((state[0] << (6 - 0)) & _BV(6)) |
-			((state[0] << (7 - 5)) & _BV(7));
+			((stateA << (4 - 2)) & _BV(4)) |
+			((stateA << (5 - 1)) & _BV(5)) |
+			((stateA << (6 - 0)) & _BV(6)) |
+			((stateA << (7 - 5)) & _BV(7));
 			
-	PORTC = ((state[1] >> 1) & (_BV(0) | _BV(1) | _BV(2))) |
-			((state[0] >> 3) & (_BV(3) | _BV(4))) |
-			((state[1] << 5) & _BV(5)) |
-			((state[0] << (6 - 3)) & (_BV(6) | _BV(7)));
+	PORTC = ((stateB >> 1) & (_BV(0) | _BV(1) | _BV(2))) |
+			((stateA >> 3) & (_BV(3) | _BV(4))) |
+			((stateB << 5) & _BV(5)) |
+			((stateA << (6 - 3)) & (_BV(6) | _BV(7)));
 			
-	PORTD = ((state[2] >> 2) & (_BV(0) | _BV(1))) |
-			((state[2] << 2) & (_BV(2) | _BV(3))) |
-			((state[1] >> 2) & (_BV(4) | _BV(5))) |
-			((state[1] << 2) & (_BV(6) | _BV(7)));
+	PORTD = ((stateC >> 2) & (_BV(0) | _BV(1))) |
+			((stateC << 2) & (_BV(2) | _BV(3))) |
+			((stateB >> 2) & (_BV(4) | _BV(5))) |
+			((stateB << 2) & (_BV(6) | _BV(7)));
 }
 
 static int8_t handle_KPLC_IOState_Request(CanardRxTransfer* transfer)
