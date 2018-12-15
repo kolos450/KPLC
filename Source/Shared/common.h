@@ -45,7 +45,7 @@ enum FailureReason
 	
 	FailureReason_Other = 1,
 	FailureReason_Watchdog = 2,
-	FailureReason_InvalidArgument = 3,
+	FailureReason_CAN_BusError = 3,
 	FailureReason_OutOfMemory = 4,
 	FailureReason_NodeIdNotSet = 5,
 	FailureReason_PanicReceived = 6,
@@ -61,7 +61,7 @@ enum FailureReason
 	FailureReason_RXBufferOverflow = 16,
 	FailureReason_LowPower = 17,
 	FailureReason_CAN_DataOverrun = 18,
-	FailureReason_CAN_BusError = 19,
+	FailureReason_InvalidArgument = 19,
 };
 
 #define GET_MICROS (uint64_t)millis() * 1000ULL
