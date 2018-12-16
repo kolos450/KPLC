@@ -37,43 +37,16 @@ const static uint32_t _MCPMaxSpeed = 8000000UL;
 #define REG_WRITE 0
 #define OPCODE 0x40
 
-
-/*
- * The IOCON register:
- * 7    | 6      | 5     | 4      | 3    | 2   | 1      | 0
- * BANK | MIRROR | SEQOP | DISSLW | HAEN | ODR | INTPOL | -NC-
- * -----------------------------------------------------------------------
- * 0b01101100
- * BANK: (Controls how the registers are addressed)
- *   1 The registers associated with each port are separated into different banks
- *   0 The registers are in the same bank (addresses are sequential)
- * MIRROR: (INT Pins Mirror bit)
- *   1 The INT pins are internally connected
- *   0 The INT pins are not connected. INTA is associated with PortA and INTB is associated with PortB
- * SEQOP: (Sequential Operation mode bit)
- *   1 Sequential operation disabled, address pointer does not increment
- *   0 Sequential operation enabled, address pointer increments.
- * DISSLW: (Slew Rate control bit for SDA output, only I2C)
- * HAEN: (Hardware Address Enable bit, SPI only)
- *   1 Enables the MCP23S17 address pins
- *   0 Disables the MCP23S17 address pins
- * ODR: (This bit configures the INT pin as an open-drain output)
- *   1 Open-drain output (overrides the INTPOL bit).
- *   0 Active driver output (INTPOL bit sets the polarity).
- * INTPOL: (This bit sets the polarity of the INT output pin)
- *   1 Active high
- *   0 Active low
- */
-
 template <class MCP23S17Tag>
 class MCP23S17 {
 
 public:
+	MCP23S17();
     /// @param haenAddress Chip address from 0x20 to 0x27.
     MCP23S17(const uint8_t haenAddress);
 
     /// @param protocolInitOverride SPI will not be initialized when true.
-    void initialize(bool protocolInitOverride = false);
+    int8_t initialize(bool protocolInitOverride = false);
 
     /// @param direction OUTPUT => all out, INPUT => all in, 0xxxx => custom setup.
     void writeDataDirection(uint16_t direction);
@@ -84,92 +57,93 @@ public:
     /// Read the pins state.
     uint16_t read();
 
-    /// Read a byte from chip register.
-    uint8_t readRegisterByte(byte reg);
-
-    /// Read a word from chip register.
-    uint16_t readRegisterWord(byte reg);
-
-    /// Write a byte in a chip register, optional for both ports.
-    /// @param both Write the same register in bank A & B when true.
-    void writeRegisterByte(byte reg, byte data, bool both = false);
-
     /// Write a word in a chip register.
     void writeRegisterWord(byte reg, word data);
 
     /// @param data HIGH => all pullup, LOW => all pulldown, 0xxxx => custom setup.
     void writePullup(uint16_t data);
 
-    /// Direct access command.
-    uint16_t readByAddress(byte addr);
-
-
 
 protected:
+	static SPISettings const spiSettings_;
 
-    inline __attribute__((always_inline))
-    void _GPIOstartSend(uint8_t mode)
-    {
-        MCP23S17Tag::SPI->beginTransaction(SPISettings(_MCPMaxSpeed, MSBFIRST, SPI_MODE0));
+    void _spiBegin(uint8_t mode)
+    {		
+        MCP23S17Tag::SPI->beginTransaction(spiSettings_);
         MCP23S17Tag::SetCS();
         mode == 1 ? MCP23S17Tag::SPI->transfer(_readCmd) : MCP23S17Tag::SPI->transfer(_writeCmd);
     }
 
 
-    inline __attribute__((always_inline))
-    void _GPIOendSend(void)
+    void _spiEnd(void)
     {
         MCP23S17Tag::ResetCS();
 
         MCP23S17Tag::SPI->endTransaction();
     }
 
-    inline __attribute__((always_inline))
-    void _GPIOwriteByte(byte addr, byte data)
+    void _spiWriteByte(byte addr, uint8_t data)
     {
-        _GPIOstartSend(0);
+        _spiBegin(0);
         MCP23S17Tag::SPI->transfer(addr);
         MCP23S17Tag::SPI->transfer(data);
-        _GPIOendSend();
+        _spiEnd();
     }
 
-    inline __attribute__((always_inline))
-    void _GPIOwriteWord(byte addr, uint16_t data)
+    void _spiWriteWord(byte addr, uint16_t data)
     {
-        _GPIOstartSend(0);
+        _spiBegin(0);
         MCP23S17Tag::SPI->transfer(addr);
         MCP23S17Tag::SPI->transfer16(data);
-        _GPIOendSend();
+        _spiEnd();
     }
+	
+	uint16_t _spiReadWord(uint8_t reg)
+	{
+		uint16_t data = 0;
+		_spiBegin(1);
+		MCP23S17Tag::SPI->transfer(reg);
+		data = MCP23S17Tag::SPI->transfer16(0);
+		_spiEnd();
+		return data;
+	}
+	
+	uint8_t _spiReadByte(byte reg)
+	{
+		uint8_t data = 0;
+		_spiBegin(1);
+		MCP23S17Tag::SPI->transfer(reg);
+		data = MCP23S17Tag::SPI->transfer(0);
+		_spiEnd();
+		return data;
+	}
 
 private:
-    uint8_t  _adrs;
     uint8_t  _useHaen;
     uint8_t  _readCmd;
     uint8_t  _writeCmd;
-    uint16_t _gpioDirection;
-    uint16_t _gpioState;
 };
 
 template <class MCP23S17Tag>
 MCP23S17<MCP23S17Tag>::MCP23S17(const uint8_t haenAdrs)
 {
-    if (haenAdrs > 0x19 && haenAdrs < 0x28)
-    {
-        _adrs = haenAdrs;
-        _useHaen = 1;
-    }
-    else
-    {
-        _adrs = 0;
-        _useHaen = 0;
-    }
-    _readCmd = OPCODE | (_adrs << 1) | REG_READ;
-    _writeCmd = OPCODE | (_adrs << 1) | REG_WRITE;
+    _useHaen = true;
+	
+    _readCmd = OPCODE | (haenAdrs << 1) | REG_READ;
+    _writeCmd = OPCODE | (haenAdrs << 1) | REG_WRITE;
 }
 
 template <class MCP23S17Tag>
-void MCP23S17<MCP23S17Tag>::initialize(bool protocolInitOverride)
+MCP23S17<MCP23S17Tag>::MCP23S17()
+{
+	_useHaen = false;
+	
+	_readCmd = OPCODE | REG_READ;
+	_writeCmd = OPCODE | REG_WRITE;
+}
+
+template <class MCP23S17Tag>
+int8_t MCP23S17<MCP23S17Tag>::initialize(bool protocolInitOverride)
 {
     if (!protocolInitOverride)
     {
@@ -178,125 +152,46 @@ void MCP23S17<MCP23S17Tag>::initialize(bool protocolInitOverride)
 	
     MCP23S17Tag::InitCS();
 	
-    _useHaen == 1 ? _GPIOwriteByte(MCP23S17_IOCON, 0b00101000) : _GPIOwriteByte(MCP23S17_IOCON, 0b00100000);
-    _gpioDirection = 0xFFFF;//all in
-    _gpioState = 0xFFFF;//all low 
-}
+	uint8_t ioconValue = _BV(MCP23S17_IOCON_INTPOL);
+	if (_useHaen)
+	{
+		ioconValue |= _BV(MCP23S17_IOCON_HAEN);
+	}
+	
+    _spiWriteByte(MCP23S17_IOCON, ioconValue);
+	
+	if (ioconValue != _spiReadByte(MCP23S17_IOCON))
+	{
+		return -1;
+	}
 
-
-template <class MCP23S17Tag>
-uint16_t MCP23S17<MCP23S17Tag>::readByAddress(byte addr)
-{
-    _GPIOstartSend(1);
-    MCP23S17Tag::SPI->transfer(addr);
-    uint16_t temp = MCP23S17Tag::SPI->transfer16(0x0);
-    _GPIOendSend();
-    return temp;
+	return 0;
 }
 
 
 template <class MCP23S17Tag>
 void MCP23S17<MCP23S17Tag>::writeDataDirection(uint16_t mode)
 {
-    if (mode == INPUT)
-    {
-        _gpioDirection = 0xFFFF;
-    }
-    else if (mode == OUTPUT)
-    {
-        _gpioDirection = 0x0000;
-        _gpioState = 0x0000;
-    }
-    else
-    {
-        _gpioDirection = mode;
-    }
-    _GPIOwriteWord(MCP23S17_IODIR, _gpioDirection);
+    _spiWriteWord(MCP23S17_IODIR, mode);
 }
 
 template <class MCP23S17Tag>
 void MCP23S17<MCP23S17Tag>::write(uint16_t value)
 {
-    if (value == HIGH)
-    {
-        _gpioState = 0xFFFF;
-    }
-    else if (value == LOW)
-    {
-        _gpioState = 0x0000;
-    }
-    else
-    {
-        _gpioState = value;
-    }
-    _GPIOwriteWord(MCP23S17_GPIO, _gpioState);
+    _spiWriteWord(MCP23S17_GPIO, value);
 }
 
 template <class MCP23S17Tag>
 uint16_t MCP23S17<MCP23S17Tag>::read()
 {
-    return readByAddress(MCP23S17_GPIO);
+    return _spiReadWord(MCP23S17_GPIO);
 }
 
 template <class MCP23S17Tag>
 void MCP23S17<MCP23S17Tag>::writePullup(uint16_t data)
 {
-    if (data == HIGH)
-    {
-        _gpioState = 0xFFFF;
-    }
-    else if (data == LOW)
-    {
-        _gpioState = 0x0000;
-    }
-    else
-    {
-        _gpioState = data;
-    }
-    _GPIOwriteWord(MCP23S17_GPPU, _gpioState);
+    _spiWriteWord(MCP23S17_GPPU, data);
 }
 
 template <class MCP23S17Tag>
-uint8_t MCP23S17<MCP23S17Tag>::readRegisterByte(byte reg)
-{
-    uint8_t data = 0;
-    _GPIOstartSend(1);
-    MCP23S17Tag::SPI->transfer(reg);
-    data = MCP23S17Tag::SPI->transfer(0);
-    _GPIOendSend();
-    return data;
-}
-
-template <class MCP23S17Tag>
-uint16_t MCP23S17<MCP23S17Tag>::readRegisterWord(byte reg)
-{
-    uint16_t data = 0;
-    _GPIOstartSend(1);
-    MCP23S17Tag::SPI->transfer(reg);
-    data = MCP23S17Tag::SPI->transfer16(0);
-    _GPIOendSend();
-    return data;
-}
-
-template <class MCP23S17Tag>
-void MCP23S17<MCP23S17Tag>::writeRegisterByte(byte reg, byte data, bool both)
-{
-    if (!both)
-    {
-        _GPIOwriteByte(reg, data);
-    }
-    else
-    {
-        _GPIOstartSend(0);
-        MCP23S17Tag::SPI->transfer(reg);
-        MCP23S17Tag::SPI->transfer(data);
-        MCP23S17Tag::SPI->transfer(data);
-        _GPIOendSend();
-    }
-}
-
-template <class MCP23S17Tag>
-void MCP23S17<MCP23S17Tag>::writeRegisterWord(byte reg, word data)
-{
-    _GPIOwriteWord(reg, (word)data);
-}
+SPISettings const MCP23S17<MCP23S17Tag>::spiSettings_ = SPISettings(_MCPMaxSpeed, MSBFIRST, SPI_MODE0);

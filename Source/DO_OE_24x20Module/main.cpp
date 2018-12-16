@@ -436,7 +436,7 @@ int main(void)
 				resetLed();
 				_delay_ms(1000);
 				
-				for (int i = 0; i < g_failureReason; i++) {
+				for (int i = 0; i < (uint8_t)g_failureReason; i++) {
 					setLed();
 					_delay_ms(300);
 					resetLed();

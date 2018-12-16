@@ -265,13 +265,19 @@ void ProcessIOStateTimerCallback(uint8_t _)
 
 int8_t setupMCP23S17()
 {
-	MCP23S17_A.initialize();
-	MCP23S17_A.writeDataDirection(INPUT);
-	MCP23S17_A.writePullup(HIGH);
+	if (MCP23S17_A.initialize() < 0)
+	{
+		return -FailureReason_CannotInit;
+	}
+	MCP23S17_A.writeDataDirection(0xFFFF);
+	MCP23S17_A.writePullup(0xFFFF);
 	
-	MCP23S17_B.initialize();
-	MCP23S17_B.writeDataDirection(INPUT);
-	MCP23S17_B.writePullup(HIGH);	
+	if (MCP23S17_B.initialize() < 0)
+	{
+		return -FailureReason_CannotInit;
+	}
+	MCP23S17_B.writeDataDirection(0xFFFF);
+	MCP23S17_B.writePullup(0xFFFF);	
 	
 	int8_t result = g_timers.every(IOSTATE_MIN_TRANSMIT_INTERVAL_MSEC, ProcessIOStateTimerCallback);
 	if (result < 0) {
@@ -535,7 +541,7 @@ int main(void)
 				resetLed();
 				_delay_ms(1000);
 				
-				for (int i = 0; i < g_failureReason; i++) {
+				for (int i = 0; i < (uint8_t)g_failureReason; i++) {
 					setLed();
 					_delay_ms(300);
 					resetLed();

@@ -162,9 +162,6 @@ struct SPI0_tag {
 	static volatile uint8_t& SPDR() { return SPDR0; }
 		
 	static void initialize() {
-		SPCR0 |= _BV(MSTR);
-		SPCR0 |= _BV(SPE);
-
 		DDRB |= _BV(SCK0);
 		DDRB |= _BV(MOSI0);
 	}
@@ -176,9 +173,6 @@ struct SPI1_tag {
 	static volatile uint8_t& SPDR() { return SPDR1; }
 		
 	static void initialize() {
-		SPCR0 |= _BV(MSTR);
-		SPCR0 |= _BV(SPE);
-
 		DDRC |= _BV(SCK1);
 		DDRE |= _BV(MOSI1);
 	}
