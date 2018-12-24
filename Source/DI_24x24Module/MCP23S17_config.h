@@ -1,7 +1,7 @@
 #include "main_config.h"
 #include <avr/io.h>
 #include "Arduino/SPI.h"
-#include "MCP23S17.h"
+#include "MCP23S17/MCP23S17.h"
 
 struct MCP23S17_A_tag
 {
