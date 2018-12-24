@@ -171,6 +171,14 @@
       <SubType>compile</SubType>
       <Link>Arduino\Arduino.h</Link>
     </Compile>
+	<Compile Include="..\Shared\Arduino\SPI.cpp">
+      <SubType>compile</SubType>
+	  <Link>Arduino\SPI.cpp</Link>
+    </Compile>
+    <Compile Include="..\Shared\Arduino\SPI.h">
+      <SubType>compile</SubType>
+	  <Link>Arduino\SPI.h</Link>
+    </Compile>
     <Compile Include="..\Shared\Arduino\wiring.c">
       <SubType>compile</SubType>
       <Link>Arduino\wiring.c</Link>
@@ -479,12 +487,6 @@
       <SubType>compile</SubType>
       <Link>uavcan\uavcan_Timestamp.c</Link>
     </Compile>
-    <Compile Include="Arduino\SPI.cpp">
-      <SubType>compile</SubType>
-    </Compile>
-    <Compile Include="Arduino\SPI.h">
-      <SubType>compile</SubType>
-    </Compile>
     <Compile Include="can_config.h">
       <SubType>compile</SubType>
     </Compile>
@@ -494,17 +496,21 @@
     <Compile Include="main_config.h">
       <SubType>compile</SubType>
     </Compile>
-    <Compile Include="MCP23S17.cpp">
+    <Compile Include="..\Shared\MCP23S17\MCP23S17.cpp">
       <SubType>compile</SubType>
+	  <Link>MCP23S17\MCP23S17.cpp</Link>
     </Compile>
-    <Compile Include="MCP23S17.h">
+    <Compile Include="..\Shared\MCP23S17\MCP23S17.h">
       <SubType>compile</SubType>
+	  <Link>MCP23S17\MCP23S17.h</Link>
     </Compile>
-    <Compile Include="MCP23S17_config.h">
+    <Compile Include="..\Shared\MCP23S17\MCP23S17_config.h">
       <SubType>compile</SubType>
+	  <Link>MCP23S17\MCP23S17_config.h</Link>
     </Compile>
-    <Compile Include="MCP23S17_registers.h">
+    <Compile Include="..\Shared\MCP23S17\MCP23S17_registers.h">
       <SubType>compile</SubType>
+	  <Link>MCP23S17\MCP23S17_registers.h</Link>
     </Compile>
     <Compile Include="wiring_config.h">
       <SubType>compile</SubType>
@@ -514,6 +520,7 @@
     <Folder Include="Arduino\" />
     <Folder Include="avr-can-lib\" />
     <Folder Include="canard\" />
+	<Folder Include="MCP23S17\" />
     <Folder Include="Timer\" />
     <Folder Include="uavcan\" />
     <Folder Include="uavcan\kplc\" />

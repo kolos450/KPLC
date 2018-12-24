@@ -17,8 +17,8 @@
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <avr/sfr_defs.h>
-#include "../Arduino/Arduino.h"
-#include "../wiring_config.h"
+#include "Arduino.h"
+#include "wiring_config.h"
 
 // SPI_HAS_TRANSACTION means SPI has beginTransaction(), endTransaction(),
 // usingInterrupt(), and SPISetting(clock, bitOrder, dataMode)

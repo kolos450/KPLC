@@ -25,7 +25,7 @@
 
 #include <inttypes.h>
 #include "Event.h"
-#include "../Arduino/Arduino.h"
+#include "Arduino/Arduino.h"
 
 template<int numberOfEvents_> class Timer {
 

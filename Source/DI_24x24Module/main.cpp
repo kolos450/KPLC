@@ -7,8 +7,8 @@
 #include <util/delay.h>
 #include "common.h"
 #include "Arduino/SPI.h"
-#include "MCP23S17.h"
-#include "MCP23S17_config.h"
+#include "MCP23S17/MCP23S17.h"
+#include "MCP23S17/MCP23S17_config.h"
 
 #include "uavcan/kplc/IOState.h"
 #include "uavcan/protocol/GetNodeInfo.h"

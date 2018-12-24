@@ -20,7 +20,7 @@
  http://www.simonmonk.org
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "../Arduino/Arduino.h"
+#include "Arduino/Arduino.h"
 
 #include "Event.h"
 
