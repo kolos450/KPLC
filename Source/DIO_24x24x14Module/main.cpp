@@ -38,11 +38,12 @@ int8_t ProcessIOState(bool forced = false);
 
 uint8_t readNodeId()
 {
-	uint8_t val =	((PINC & _BV(PINC5)) >> 5) |
-					((PIND & _BV(PIND0)) << 1) |
-					((PIND & _BV(PIND1)) << 1) |
-					(PIND & (_BV(PIND3) | _BV(PIND4))) |
-					((PINE & _BV(PINE0)) << 5);
+	uint8_t val =	((PINC & _BV(PINC5))) |
+					((PIND & _BV(PIND0)) << 4) |
+					((PIND & _BV(PIND1)) << 2) |
+					((PIND & _BV(PIND3)) >> 1) |
+					((PIND & _BV(PIND4)) >> 3) |
+					((PINE & _BV(PINE0)));
 	return val ^ 0x3F;
 }
 
@@ -61,17 +62,26 @@ static int8_t ValidateIOStateRequest(uavcan_kplc_IOStateRequest request)
 
 static void ApplyIOState(uint8_t* state)
 {
-	uint8_t stateA = state[0];
-	uint8_t stateB = state[1];
+	uint8_t state_0 = state[0];
+	uint8_t state_1 = state[1];
 	
-	MCP23S17_B.write(stateA);
+	uint8_t stateA = state_0 >> 1;
 	
-	PORTB = (PORTB & ~0x1) | (stateB & 0x1);
-	PORTC = (PORTC & 0xE7) | ((stateB & 0x30) >> 1);
+	uint8_t stateB = ((state_0 & 0x1) << 7)
+					| ((state_0 & 0x80) >> 7)
+					| ((state_1 & 0x7) << 1)
+					| ((state_1 & 0x20) >> 1)
+					| ((state_1 & 0x10) << 1)
+					| ((state_1 & 0x8) << 3);
+	
+	MCP23S17_B.write(stateB);
+	
+	PORTB = (PORTB & ~0x1) | (stateA & 0x1);
+	PORTC = (PORTC & 0xE7) | ((stateA & 0x30) >> 1);
 	PORTD = (PORTD & 0x1F)
-			| ((stateB & _BV(2)) << 6)
-			| ((stateB & _BV(3)) << 4)
-			| ((stateB & _BV(4)) << 2);
+			| ((stateA & _BV(1)) << 6)
+			| ((stateA & _BV(2)) << 4)
+			| ((stateA & _BV(3)) << 2);
 }
 
 static int8_t handle_KPLC_IOState_Request(CanardRxTransfer* transfer)
@@ -415,13 +425,9 @@ int8_t ProcessIOState(bool forced)
 	
 	uint8_t current[3] = {
 		(uint8_t)~reverse(raw_b >> 8),
-		reverse(raw_a >> 8),
 		(uint8_t)~reverse(raw_a),
+		(uint8_t)~reverse(raw_a >> 8),
 	};
-	
-	uint8_t tmp = current[1];
-	tmp = (tmp & 0xE0) | ((tmp & 0xF) << 1) | ((tmp & 0x10) >> 4);
-	current[1] = ~tmp;
 	
 	uint8_t result[3];
 	memcpy(&result[0], &g_ioState[0], sizeof(g_ioState));
