@@ -28,9 +28,7 @@ uint8_t readNodeId()
 					((PINA & _BV(PINA0)) << 2) |
 					((PINB & _BV(PINB0)) << 1) |
 					((PINB & _BV(PINB1)) >> 1);
-	val ^= 0x3F;
-	val &= ~_BV(5);
-	return val;
+	return val ^ 0x3F;
 }
 
 static int8_t ValidateIOStateRequest(uavcan_kplc_IOStateRequest request)
@@ -350,10 +348,6 @@ int main(void)
 	
 	PORTA = _BV(PORTA0) | _BV(PORTA1) | _BV(PORTA2) | _BV(PORTA3);
 	PORTB |= _BV(PORTB0) | _BV(PORTB1) | _BV(PORTB3);
-	
-	// Temporary buffers initialization issue workaround:
-	DDRA |= _BV(PORTA3);
-	PORTA &= ~_BV(PORTA3);
 	
 	int8_t result;
 	
