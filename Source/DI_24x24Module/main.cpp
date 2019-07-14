@@ -270,6 +270,10 @@ void ProcessIOStateTimerCallback(uint8_t _)
 
 int8_t setupMCP23S17()
 {
+	// This is a workaround for the issue when SPSR flag is not set for some reason.
+	// To be fixed later.
+	_delay_ms(500);
+	
 	if (MCP23S17_A.initialize() < 0)
 	{
 		return -FailureReason_CannotInit;
