@@ -483,6 +483,9 @@ void disableCanRxInterrupt()
 
 int main(void)
 {	
+	wdt_enable(WDTO_250MS);
+	wdt_reset();
+	
 	DDRE |= _BV(PORTE1); // LED
 	DDRB |= _BV(PORTB1); // MCP2515 Reset
 	
@@ -519,9 +522,6 @@ int main(void)
 	// Set up MCP2515 interrupt.
 	EICRA = _BV(ISC01);	// Trigger INT0 on falling edge
 	EIMSK = _BV(INT0);	// Enable INT0
-	
-	wdt_enable(WDTO_250MS);
-	WDTCSR |= _BV(WDE);
 	
 	sei();
 	
@@ -599,18 +599,17 @@ int main(void)
 				PORTC &= ~(_BV(PORTC3) | _BV(PORTC4));
 				PORTD &= ~(_BV(PORTD5) | _BV(PORTD6) | _BV(PORTD7));
 				MCP23S17_B.write(0);
-				
-				wdt_disable();
+
 				cli();
 				
 				resetLed();
-				_delay_ms(1000);
+				delayMsWhileWdtReset(1000);
 				
 				for (int i = 0; i < (uint8_t)g_failureReason; i++) {
 					setLed();
-					_delay_ms(300);
+					delayMsWhileWdtReset(300);
 					resetLed();
-					_delay_ms(300);
+					delayMsWhileWdtReset(300);
 				}
 
 				break;

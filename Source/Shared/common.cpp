@@ -285,11 +285,11 @@ void wdt_first(void)
 {
  	if ((MCUSR & _BV(WDRF)) == _BV(WDRF))
  	{
-		g_failureReason = FailureReason_Watchdog;
-		g_nodeState = NodeState_Error;
+		//g_failureReason = FailureReason_Watchdog;
+		//g_nodeState = NodeState_Error;
 		
 		MCUSR &= ~(_BV(WDRF)); // Clear reset flag.
-		wdt_disable();
+		//wdt_disable();
 		// http://www.atmel.com/webdoc/AVRLibcReferenceManual/FAQ_1faq_softreset.html
 		// https://www.pocketmagic.net/avr-watchdog/
 	}
@@ -398,4 +398,24 @@ int8_t handle_protocol_NodeStatus(CanardRxTransfer* transfer)
 void initializeMainModuleStateUpdateTime()
 {
 	g_mainModuleLastStatusUpdateTime = millis();
+}
+
+void delayMsWhileWdtReset(uint16_t time)
+{
+	while (time)
+	{
+		wdt_reset();
+		if (time >= 100) {
+			_delay_ms(100);
+			time -= 100;
+		}
+		else if(time >= 10) {
+			_delay_ms(10);
+			time -= 10;
+		}
+		else if(time >= 1) {
+			_delay_ms(1);
+			time -= 1;
+		}
+	}
 }

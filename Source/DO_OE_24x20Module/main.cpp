@@ -307,6 +307,9 @@ void resetLed()
 
 int main(void)
 {
+	wdt_enable(WDTO_250MS);
+	wdt_reset();
+	
 	DDRA = _BV(PORTA4) | _BV(PORTA5) | _BV(PORTA6) | _BV(PORTA7);
 	DDRB |= _BV(PORTB3) | _BV(PORTB4); // MCP2515 Reset
 	DDRC = 0xFF;
@@ -331,9 +334,6 @@ int main(void)
 	// Set up MCP2515 interrupt.
 	EICRA |= _BV(ISC21);	// Trigger INT2 on falling edge
 	EIMSK |= _BV(INT2);		// Enable INT2
-	
-	wdt_enable(WDTO_250MS);
-	WDTCSR |= _BV(WDE);
 	
 	sei();
 	
@@ -408,17 +408,16 @@ int main(void)
 				PORTC = 0;
 				PORTD = 0;
 				
-				wdt_disable();
 				cli();
 				
 				resetLed();
-				_delay_ms(1000);
+				delayMsWhileWdtReset(1000);
 				
 				for (int i = 0; i < (uint8_t)g_failureReason; i++) {
 					setLed();
-					_delay_ms(300);
+					delayMsWhileWdtReset(300);
 					resetLed();
-					_delay_ms(300);
+					delayMsWhileWdtReset(300);
 				}
 				
 				break;

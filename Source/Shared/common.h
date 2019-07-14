@@ -5,6 +5,7 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
+#include <util/delay.h>
 #include "canard/canard_avr.h"
 #include "canard/canard.h"
 #include "Timer/Timer.h"
@@ -109,3 +110,5 @@ void resetTransceiverState();
 
 void initializeMainModuleStateUpdateTime();
 void validateMasterNodeState();
+
+void delayMsWhileWdtReset(uint16_t time);
