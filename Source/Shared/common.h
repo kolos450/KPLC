@@ -67,6 +67,7 @@ enum FailureReason
 
 #define GET_MICROS (uint64_t)millis() * 1000ULL
 
+extern uint32_t g_mainModuleLastStatusUpdateTime;
 extern uint8_t g_nodeStatusHealth;
 extern uint8_t g_nodeStatusMode;
 extern NodeState g_nodeState;
@@ -95,6 +96,7 @@ bool shouldAcceptTransfer(
 void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer);
 
 int8_t handle_protocol_GetNodeInfo(CanardRxTransfer* transfer);
+int8_t handle_protocol_NodeStatus(CanardRxTransfer* transfer);
 
 void handleCanRxInterrupt();
 void enableCanRxInterrupt();
@@ -102,7 +104,8 @@ void disableCanRxInterrupt();
 
 uint8_t readNodeId();
 
-int8_t validateMasterNodeStatus(uavcan_protocol_NodeStatus status);
-
 int8_t validateTransceiverState();
 void resetTransceiverState();
+
+void initializeMainModuleStateUpdateTime();
+void validateMasterNodeState();

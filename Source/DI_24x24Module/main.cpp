@@ -19,8 +19,6 @@
 #define MAIN_MODULE_NODE_ID 100
 #define IOSTATE_MIN_TRANSMIT_INTERVAL_MSEC 500
 
-static uint32_t g_mainModuleLastStatusUpdateTime = 0;
-
 CanardInstance g_canard;              // The canard library instance.
 uint8_t g_canard_memory_pool[1024];   // Arena for memory allocation, used by the library.
 
@@ -57,29 +55,6 @@ static int8_t handle_KPLC_IOState_Response(CanardRxTransfer* transfer)
 	
 	if (response.status != 0) {
 		return -FailureReason_UnexpectedResponse;
-	}
-	
-	return 0;
-}
-
-static int8_t handle_protocol_NodeStatus(CanardRxTransfer* transfer)
-{
-	if (transfer->source_node_id != MAIN_MODULE_NODE_ID) {
-		return 0;
-	}
-	
-	int8_t ret;
-	uavcan_protocol_NodeStatus status;
-	ret = uavcan_protocol_NodeStatus_decode(transfer, transfer->payload_len, &status, NULL);
-	if (ret < 0) {
-		return -FailureReason_CannotDecodeMessage;
-	}
-	
-	g_mainModuleLastStatusUpdateTime = millis();
-	
-	ret = validateMasterNodeStatus(status);
-	if (ret < 0) {
-		return ret;
 	}
 	
 	return 0;
@@ -240,23 +215,6 @@ void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer)
 		{
 			fail(result);
 		}
-	}
-}
-
-void ValidateMasterNodeState()
-{
-	uint32_t now = millis();
-	
-	// TODO: decrease multiplier.
-	if ((now - g_mainModuleLastStatusUpdateTime) > 3 * CANARD_NODESTATUS_PERIOD_MSEC) {
-		uint32_t difference = now - g_mainModuleLastStatusUpdateTime;
-		char buffer[11];
-		itoa(difference, buffer, 10);
-		uint8_t len = strlen(buffer);
-		if (len > 4) {
-			len = 0; // Panic message length restrictions.
-		}
-		fail(-FailureReason_MasterStatusTimeoutOverflow, (uint8_t*)buffer, len);
 	}
 }
 
@@ -481,6 +439,8 @@ int main(void)
 	
 	resetTransceiverState();
 	
+	initializeMainModuleStateUpdateTime();
+	
 	while (1)
 	{
 		wdt_reset();
@@ -529,7 +489,7 @@ int main(void)
 					continue;
 				}
 				
-				ValidateMasterNodeState();
+				validateMasterNodeState();
 				if (!checkNodeHealth()) {
 					continue;
 				}

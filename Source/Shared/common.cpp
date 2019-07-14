@@ -1,6 +1,7 @@
 #include "common.h"
 #include "avr-can-lib/can.h"
 
+uint32_t g_mainModuleLastStatusUpdateTime = 0;
 uint8_t g_nodeStatusHealth = UAVCAN_PROTOCOL_NODESTATUS_HEALTH_OK;
 uint8_t g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_INITIALIZATION;
 NodeState g_nodeState = NodeState_Initial;
@@ -317,7 +318,7 @@ ParamKind parseParamKind(char* name, int len)
 	return (ParamKind)-1;
 }
 
-int8_t validateMasterNodeStatus(uavcan_protocol_NodeStatus status)
+static int8_t validateMasterNodeStatus(uavcan_protocol_NodeStatus status)
 {
 	switch (g_nodeState)
 	{
@@ -352,4 +353,49 @@ int8_t validateMasterNodeStatus(uavcan_protocol_NodeStatus status)
 	}
 	
 	return 0;
+}
+
+void validateMasterNodeState()
+{
+	uint32_t now = millis();
+	
+	// TODO: decrease multiplier.
+	if ((now - g_mainModuleLastStatusUpdateTime) > 3 * CANARD_NODESTATUS_PERIOD_MSEC) {
+		uint32_t difference = now - g_mainModuleLastStatusUpdateTime;
+		char buffer[11];
+		itoa(difference, buffer, 10);
+		uint8_t len = strlen(buffer);
+		if (len > 4) {
+			len = 0; // Panic message length restrictions.
+		}
+		fail(-FailureReason_MasterStatusTimeoutOverflow, (uint8_t*)buffer, len);
+	}
+}
+
+int8_t handle_protocol_NodeStatus(CanardRxTransfer* transfer)
+{
+	if (transfer->source_node_id != MAIN_MODULE_NODE_ID) {
+		return 0;
+	}
+	
+	int8_t ret;
+	uavcan_protocol_NodeStatus status;
+	ret = uavcan_protocol_NodeStatus_decode(transfer, transfer->payload_len, &status, NULL);
+	if (ret < 0) {
+		return -FailureReason_CannotDecodeMessage;
+	}
+	
+	g_mainModuleLastStatusUpdateTime = millis();
+	
+	ret = validateMasterNodeStatus(status);
+	if (ret < 0) {
+		return ret;
+	}
+	
+	return 0;
+}
+
+void initializeMainModuleStateUpdateTime()
+{
+	g_mainModuleLastStatusUpdateTime = millis();
 }

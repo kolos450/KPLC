@@ -13,8 +13,6 @@
 #include "uavcan/protocol/Panic.h"
 #include "uavcan/protocol/param/GetSet.h"
 
-static uint32_t g_mainModuleLastStatusUpdateTime = 0;
-
 CanardInstance g_canard;              // The canard library instance.
 uint8_t g_canard_memory_pool[1024];   // Arena for memory allocation, used by the library.
 
@@ -119,29 +117,6 @@ static int8_t handle_KPLC_IOState_Request(CanardRxTransfer* transfer)
 	
 	if (ret_int16 < 0) {
 		return (int8_t)ret_int16;
-	}
-	
-	return 0;
-}
-
-static int8_t handle_protocol_NodeStatus(CanardRxTransfer* transfer)
-{
-	if (transfer->source_node_id != MAIN_MODULE_NODE_ID) {
-		return 0;
-	}
-	
-	int8_t ret;
-	uavcan_protocol_NodeStatus status;
-	ret = uavcan_protocol_NodeStatus_decode(transfer, transfer->payload_len, &status, NULL);
-	if (ret < 0) {
-		return -FailureReason_CannotDecodeMessage;
-	}
-	
-	g_mainModuleLastStatusUpdateTime = millis();
-	
-	ret = validateMasterNodeStatus(status);
-	if (ret < 0) {
-		return ret;
 	}
 	
 	return 0;
@@ -305,17 +280,6 @@ void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer)
 	}
 }
 
-int8_t ValidateMasterNodeState()
-{
-	uint32_t now = millis();
-	
-	if ((now - g_mainModuleLastStatusUpdateTime) > 2 * CANARD_NODESTATUS_PERIOD_MSEC) {
-		return -FailureReason_MasterStatusTimeoutOverflow;
-	}
-	
-	return 0;
-}
-
 ISR(INT2_vect)
 {
 	handleCanRxInterrupt();
@@ -375,6 +339,8 @@ int main(void)
 	
 	resetTransceiverState();
 	
+	initializeMainModuleStateUpdateTime();
+	
 	while (1)
 	{
 		wdt_reset();
@@ -428,9 +394,8 @@ int main(void)
 					continue;
 				}
 				
-				result = ValidateMasterNodeState();
-				if (result < 0) {
-					fail(result);
+				validateMasterNodeState();
+				if (!checkNodeHealth()) {
 					continue;
 				}
 				
