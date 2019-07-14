@@ -310,7 +310,7 @@ int8_t ValidateMasterNodeState()
 	uint32_t now = millis();
 	
 	if ((now - g_mainModuleLastStatusUpdateTime) > 2 * CANARD_NODESTATUS_PERIOD_MSEC) {
-		return -FailureReason_MasterStateValidationError;
+		return -FailureReason_MasterStatusTimeoutOverflow;
 	}
 	
 	return 0;
@@ -384,20 +384,22 @@ int main(void)
 			case NodeState_Initial:
 			{
 				result = validateTransceiverState();
-				if (result < 0)
-				{
+				if (result < 0) {
 					fail(result);
 					continue;
 				}
 				
 				result = sendCanard();
-				if (result < 0)
-				{
+				if (result < 0) {
 					fail(result);
 					continue;
 				}
 				
 				receiveCanard();
+				if (!checkNodeHealth()) {
+					continue;
+				}
+				
 				g_timers.update();
 				
 				break;
@@ -405,21 +407,26 @@ int main(void)
 			case NodeState_Operational:
 			{
 				result = validateTransceiverState();
-				if (result < 0)
-				{
+				if (result < 0) {
 					fail(result);
 					continue;
 				}
 				
 				result = sendCanard();
-				if (result < 0)
-				{
+				if (result < 0) {
 					fail(result);
 					continue;
 				}
 				
 				receiveCanard();
+				if (!checkNodeHealth()) {
+					continue;
+				}
+				
 				g_timers.update();
+				if (!checkNodeHealth()) {
+					continue;
+				}
 				
 				result = ValidateMasterNodeState();
 				if (result < 0) {

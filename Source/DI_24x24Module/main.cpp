@@ -243,16 +243,21 @@ void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer)
 	}
 }
 
-int8_t ValidateMasterNodeState()
+void ValidateMasterNodeState()
 {
 	uint32_t now = millis();
 	
 	// TODO: decrease multiplier.
 	if ((now - g_mainModuleLastStatusUpdateTime) > 3 * CANARD_NODESTATUS_PERIOD_MSEC) {
-		return -FailureReason_MasterStateValidationError;
+		uint32_t difference = now - g_mainModuleLastStatusUpdateTime;
+		char buffer[11];
+		itoa(difference, buffer, 10);
+		uint8_t len = strlen(buffer);
+		if (len > 4) {
+			len = 0; // Panic message length restrictions.
+		}
+		fail(-FailureReason_MasterStatusTimeoutOverflow, (uint8_t*)buffer, len);
 	}
-	
-	return 0;
 }
 
 void ProcessIOStateTimerCallback(uint8_t _)
@@ -481,20 +486,22 @@ int main(void)
 			case NodeState_Initial:
 			{
 				result = validateTransceiverState();
-				if (result < 0)
-				{
+				if (result < 0) {
 					fail(result);
 					continue;
 				}
 				
 				result = sendCanard();
-				if (result < 0)
-				{
+				if (result < 0) {
 					fail(result);
 					continue;
 				}
  				
  				receiveCanard();
+				if (!checkNodeHealth()) {
+					continue;
+				}
+				 
 				g_timers.update();
 				
 				break;
@@ -502,24 +509,24 @@ int main(void)
 			case NodeState_Operational:
 			{
 				result = validateTransceiverState();
-				if (result < 0)
-				{
+				if (result < 0) {
 					fail(result);
 					continue;
 				}
 				
 				result = sendCanard();
-				if (result < 0)
-				{
+				if (result < 0) {
 					fail(result);
 					continue;
 				}
 				
 				receiveCanard();
+				if (!checkNodeHealth()) {
+					continue;
+				}
 				
-				result = ValidateMasterNodeState();
-				if (result < 0) {
-					fail(result);
+				ValidateMasterNodeState();
+				if (!checkNodeHealth()) {
 					continue;
 				}
 				

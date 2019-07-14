@@ -80,21 +80,32 @@ int8_t handle_protocol_GetNodeInfo(CanardRxTransfer* transfer)
 	return 0;
 }
 
-void fail(int8_t reason)
+void fail(int8_t reason, uint8_t* message, uint8_t message_length)
 {
 	g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_OFFLINE;
 	g_nodeStatusHealth = UAVCAN_PROTOCOL_NODESTATUS_HEALTH_CRITICAL;
 	g_nodeState = NodeState_Error;
 	g_failureReason = (FailureReason)(-reason);
 	
-	uint8_t buffer[UAVCAN_PROTOCOL_PANIC_MAX_SIZE];
-	static uint8_t transfer_id = 0;
-	
 	uavcan_protocol_Panic msg;
-	msg.reason_text.len = 1;
-	uint8_t reasonText[1] = { (uint8_t)(-reason) };
-	msg.reason_text.data = &reasonText[0];
-	int16_t len = uavcan_protocol_Panic_encode(&msg, &buffer[0]);
+	
+	char messageBuffer[UAVCAN_PROTOCOL_PANIC_REASON_TEXT_MAX_LENGTH];
+	itoa(-reason, messageBuffer, 10);
+	auto offset = strlen(messageBuffer);
+	messageBuffer[offset++] = ':';
+	
+	if (message_length != 0)
+	{
+		auto msgLen = min(message_length, UAVCAN_PROTOCOL_PANIC_REASON_TEXT_MAX_LENGTH - offset);
+		memcpy(messageBuffer + offset, message, msgLen);
+		offset += msgLen;
+	}
+	
+	uint8_t buffer[UAVCAN_PROTOCOL_PANIC_MAX_SIZE];
+	static uint8_t transfer_id = 0;	
+	msg.reason_text.len = offset;
+	msg.reason_text.data = (uint8_t*)messageBuffer;
+	int16_t len = uavcan_protocol_Panic_encode(&msg, buffer);
 	
 	int16_t result = canardBroadcast(&g_canard,
 		UAVCAN_PROTOCOL_PANIC_SIGNATURE,
@@ -109,6 +120,10 @@ void fail(int8_t reason)
 	}
 	
 	sendCanard();
+}
+
+bool checkNodeHealth() {
+	return g_nodeState != NodeState_Error;
 }
 
 static void canardCleanupStaleTransfersHandler(uint8_t timerId)
