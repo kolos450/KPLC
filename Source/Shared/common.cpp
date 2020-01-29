@@ -1,6 +1,7 @@
 #include "common.h"
 #include "avr-can-lib/can.h"
 
+uint32_t g_mainModuleLastStatusUpdateTime = 0;
 uint8_t g_nodeStatusHealth = UAVCAN_PROTOCOL_NODESTATUS_HEALTH_OK;
 uint8_t g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_INITIALIZATION;
 NodeState g_nodeState = NodeState_Initial;
@@ -80,21 +81,32 @@ int8_t handle_protocol_GetNodeInfo(CanardRxTransfer* transfer)
 	return 0;
 }
 
-void fail(int8_t reason)
+void fail(int8_t reason, uint8_t* message, uint8_t message_length)
 {
 	g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_OFFLINE;
 	g_nodeStatusHealth = UAVCAN_PROTOCOL_NODESTATUS_HEALTH_CRITICAL;
 	g_nodeState = NodeState_Error;
 	g_failureReason = (FailureReason)(-reason);
 	
-	uint8_t buffer[UAVCAN_PROTOCOL_PANIC_MAX_SIZE];
-	static uint8_t transfer_id = 0;
-	
 	uavcan_protocol_Panic msg;
-	msg.reason_text.len = 1;
-	uint8_t reasonText[1] = { (uint8_t)(-reason) };
-	msg.reason_text.data = &reasonText[0];
-	int16_t len = uavcan_protocol_Panic_encode(&msg, &buffer[0]);
+	
+	char messageBuffer[UAVCAN_PROTOCOL_PANIC_REASON_TEXT_MAX_LENGTH];
+	itoa(-reason, messageBuffer, 10);
+	auto offset = strlen(messageBuffer);
+	messageBuffer[offset++] = ':';
+	
+	if (message_length != 0)
+	{
+		auto msgLen = min(message_length, UAVCAN_PROTOCOL_PANIC_REASON_TEXT_MAX_LENGTH - offset);
+		memcpy(messageBuffer + offset, message, msgLen);
+		offset += msgLen;
+	}
+	
+	uint8_t buffer[UAVCAN_PROTOCOL_PANIC_MAX_SIZE];
+	static uint8_t transfer_id = 0;	
+	msg.reason_text.len = offset;
+	msg.reason_text.data = (uint8_t*)messageBuffer;
+	int16_t len = uavcan_protocol_Panic_encode(&msg, buffer);
 	
 	int16_t result = canardBroadcast(&g_canard,
 		UAVCAN_PROTOCOL_PANIC_SIGNATURE,
@@ -109,6 +121,10 @@ void fail(int8_t reason)
 	}
 	
 	sendCanard();
+}
+
+bool checkNodeHealth() {
+	return g_nodeState != NodeState_Error;
 }
 
 static void canardCleanupStaleTransfersHandler(uint8_t timerId)
@@ -269,11 +285,11 @@ void wdt_first(void)
 {
  	if ((MCUSR & _BV(WDRF)) == _BV(WDRF))
  	{
-		g_failureReason = FailureReason_Watchdog;
-		g_nodeState = NodeState_Error;
+		//g_failureReason = FailureReason_Watchdog;
+		//g_nodeState = NodeState_Error;
 		
 		MCUSR &= ~(_BV(WDRF)); // Clear reset flag.
-		wdt_disable();
+		//wdt_disable();
 		// http://www.atmel.com/webdoc/AVRLibcReferenceManual/FAQ_1faq_softreset.html
 		// https://www.pocketmagic.net/avr-watchdog/
 	}
@@ -302,7 +318,7 @@ ParamKind parseParamKind(char* name, int len)
 	return (ParamKind)-1;
 }
 
-int8_t validateMasterNodeStatus(uavcan_protocol_NodeStatus status)
+static int8_t validateMasterNodeStatus(uavcan_protocol_NodeStatus status)
 {
 	switch (g_nodeState)
 	{
@@ -337,4 +353,69 @@ int8_t validateMasterNodeStatus(uavcan_protocol_NodeStatus status)
 	}
 	
 	return 0;
+}
+
+void validateMasterNodeState()
+{
+	uint32_t now = millis();
+	
+	// TODO: decrease multiplier.
+	if ((now - g_mainModuleLastStatusUpdateTime) > 3 * CANARD_NODESTATUS_PERIOD_MSEC) {
+		uint32_t difference = now - g_mainModuleLastStatusUpdateTime;
+		char buffer[11];
+		itoa(difference, buffer, 10);
+		uint8_t len = strlen(buffer);
+		if (len > 4) {
+			len = 0; // Panic message length restrictions.
+		}
+		fail(-FailureReason_MasterStatusTimeoutOverflow, (uint8_t*)buffer, len);
+	}
+}
+
+int8_t handle_protocol_NodeStatus(CanardRxTransfer* transfer)
+{
+	if (transfer->source_node_id != MAIN_MODULE_NODE_ID) {
+		return 0;
+	}
+	
+	int8_t ret;
+	uavcan_protocol_NodeStatus status;
+	ret = uavcan_protocol_NodeStatus_decode(transfer, transfer->payload_len, &status, NULL);
+	if (ret < 0) {
+		return -FailureReason_CannotDecodeMessage;
+	}
+	
+	g_mainModuleLastStatusUpdateTime = millis();
+	
+	ret = validateMasterNodeStatus(status);
+	if (ret < 0) {
+		return ret;
+	}
+	
+	return 0;
+}
+
+void initializeMainModuleStateUpdateTime()
+{
+	g_mainModuleLastStatusUpdateTime = millis();
+}
+
+void delayMsWhileWdtReset(uint16_t time)
+{
+	while (time)
+	{
+		wdt_reset();
+		if (time >= 100) {
+			_delay_ms(100);
+			time -= 100;
+		}
+		else if(time >= 10) {
+			_delay_ms(10);
+			time -= 10;
+		}
+		else if(time >= 1) {
+			_delay_ms(1);
+			time -= 1;
+		}
+	}
 }

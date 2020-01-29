@@ -19,8 +19,6 @@
 #define MAIN_MODULE_NODE_ID 100
 #define IOSTATE_MIN_TRANSMIT_INTERVAL_MSEC 500
 
-static uint32_t g_mainModuleLastStatusUpdateTime = 0;
-
 CanardInstance g_canard;              // The canard library instance.
 uint8_t g_canard_memory_pool[1024];   // Arena for memory allocation, used by the library.
 
@@ -146,29 +144,6 @@ static int8_t handle_KPLC_IOState_Response(CanardRxTransfer* transfer)
 	
 	if (response.status != 0) {
 		return -FailureReason_UnexpectedResponse;
-	}
-	
-	return 0;
-}
-
-static int8_t handle_protocol_NodeStatus(CanardRxTransfer* transfer)
-{
-	if (transfer->source_node_id != MAIN_MODULE_NODE_ID) {
-		return 0;
-	}
-	
-	int8_t ret;
-	uavcan_protocol_NodeStatus status;
-	ret = uavcan_protocol_NodeStatus_decode(transfer, transfer->payload_len, &status, NULL);
-	if (ret < 0) {
-		return -FailureReason_CannotDecodeMessage;
-	}
-	
-	g_mainModuleLastStatusUpdateTime = millis();
-	
-	ret = validateMasterNodeStatus(status);
-	if (ret < 0) {
-		return ret;
 	}
 	
 	return 0;
@@ -333,18 +308,6 @@ void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer)
 			fail(result);
 		}
 	}
-}
-
-int8_t ValidateMasterNodeState()
-{
-	uint32_t now = millis();
-	
-	// TODO: decrease multiplier.
-	if ((now - g_mainModuleLastStatusUpdateTime) > 3 * CANARD_NODESTATUS_PERIOD_MSEC) {
-		return -FailureReason_MasterStateValidationError;
-	}
-	
-	return 0;
 }
 
 void ProcessIOStateTimerCallback(uint8_t _)
@@ -520,6 +483,9 @@ void disableCanRxInterrupt()
 
 int main(void)
 {	
+	wdt_enable(WDTO_250MS);
+	wdt_reset();
+	
 	DDRE |= _BV(PORTE1); // LED
 	DDRB |= _BV(PORTB1); // MCP2515 Reset
 	
@@ -557,12 +523,11 @@ int main(void)
 	EICRA = _BV(ISC01);	// Trigger INT0 on falling edge
 	EIMSK = _BV(INT0);	// Enable INT0
 	
-	wdt_enable(WDTO_250MS);
-	WDTCSR |= _BV(WDE);
-	
 	sei();
 	
 	resetTransceiverState();
+	
+	initializeMainModuleStateUpdateTime();
 	
 	while (1)
 	{
@@ -573,20 +538,22 @@ int main(void)
 			case NodeState_Initial:
 			{
 				result = validateTransceiverState();
-				if (result < 0)
-				{
+				if (result < 0) {
 					fail(result);
 					continue;
 				}
 				
 				result = sendCanard();
-				if (result < 0)
-				{
+				if (result < 0) {
 					fail(result);
 					continue;
 				}
  				
  				receiveCanard();
+				if (!checkNodeHealth()) {
+					continue;
+				}
+				
 				g_timers.update();
 				
 				break;
@@ -594,24 +561,24 @@ int main(void)
 			case NodeState_Operational:
 			{
 				result = validateTransceiverState();
-				if (result < 0)
-				{
+				if (result < 0) {
 					fail(result);
 					continue;
 				}
 				
 				result = sendCanard();
-				if (result < 0)
-				{
+				if (result < 0) {
 					fail(result);
 					continue;
 				}
 				
 				receiveCanard();
+				if (!checkNodeHealth()) {
+					continue;
+				}
 				
-				result = ValidateMasterNodeState();
-				if (result < 0) {
-					fail(result);
+				validateMasterNodeState();
+				if (!checkNodeHealth()) {
 					continue;
 				}
 				
@@ -632,18 +599,17 @@ int main(void)
 				PORTC &= ~(_BV(PORTC3) | _BV(PORTC4));
 				PORTD &= ~(_BV(PORTD5) | _BV(PORTD6) | _BV(PORTD7));
 				MCP23S17_B.write(0);
-				
-				wdt_disable();
+
 				cli();
 				
 				resetLed();
-				_delay_ms(1000);
+				delayMsWhileWdtReset(1000);
 				
 				for (int i = 0; i < (uint8_t)g_failureReason; i++) {
 					setLed();
-					_delay_ms(300);
+					delayMsWhileWdtReset(300);
 					resetLed();
-					_delay_ms(300);
+					delayMsWhileWdtReset(300);
 				}
 
 				break;

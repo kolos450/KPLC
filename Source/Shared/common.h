@@ -5,6 +5,7 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <avr/wdt.h>
+#include <util/delay.h>
 #include "canard/canard_avr.h"
 #include "canard/canard.h"
 #include "Timer/Timer.h"
@@ -62,10 +63,12 @@ enum FailureReason
 	FailureReason_LowPower = 17,
 	FailureReason_CAN_DataOverrun = 18,
 	FailureReason_InvalidArgument = 19,
+	FailureReason_MasterStatusTimeoutOverflow = 20,
 };
 
 #define GET_MICROS (uint64_t)millis() * 1000ULL
 
+extern uint32_t g_mainModuleLastStatusUpdateTime;
 extern uint8_t g_nodeStatusHealth;
 extern uint8_t g_nodeStatusMode;
 extern NodeState g_nodeState;
@@ -79,7 +82,8 @@ extern Timer<4> g_timers;
 typedef int8_t (*uavcanMessageHandler_t)(CanardRxTransfer* transfer);
 
 int8_t setup(void);
-void fail(int8_t reason);
+void fail(int8_t reason, uint8_t* message = NULL, uint8_t message_length = 0);
+bool checkNodeHealth();
 
 int8_t sendCanard(void);
 void receiveCanard(void);
@@ -93,6 +97,7 @@ bool shouldAcceptTransfer(
 void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer);
 
 int8_t handle_protocol_GetNodeInfo(CanardRxTransfer* transfer);
+int8_t handle_protocol_NodeStatus(CanardRxTransfer* transfer);
 
 void handleCanRxInterrupt();
 void enableCanRxInterrupt();
@@ -100,7 +105,10 @@ void disableCanRxInterrupt();
 
 uint8_t readNodeId();
 
-int8_t validateMasterNodeStatus(uavcan_protocol_NodeStatus status);
-
 int8_t validateTransceiverState();
 void resetTransceiverState();
+
+void initializeMainModuleStateUpdateTime();
+void validateMasterNodeState();
+
+void delayMsWhileWdtReset(uint16_t time);
