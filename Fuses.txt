@@ -1,0 +1,3 @@
+           Low  High  Ext
+DI Module: FF   C9    FC
+DO Module: FF   C9    ??
