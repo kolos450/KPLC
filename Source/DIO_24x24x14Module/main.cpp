@@ -325,12 +325,14 @@ int8_t setupMCP23S17()
 		return -FailureReason_CannotInit;
 	}
 	MCP23S17_A.writeDataDirection(0xFFFF);
+	MCP23S17_A.writePullup(0xFFFF);
 	
 	if (MCP23S17_B.initialize() < 0)
 	{
 		return -FailureReason_CannotInit;
 	}
 	MCP23S17_B.writeDataDirection(0xFF00);
+	MCP23S17_B.writePullup(0xFF00);
 	
 	int8_t result = g_timers.every(IOSTATE_MIN_TRANSMIT_INTERVAL_MSEC, ProcessIOStateTimerCallback);
 	if (result < 0)
