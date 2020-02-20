@@ -63,23 +63,22 @@ static void ApplyIOState(uint8_t* state)
 	uint8_t state_0 = state[0];
 	uint8_t state_1 = state[1];
 	
-	uint8_t stateA = state_0 >> 1;
-	
 	uint8_t stateB = ((state_0 & 0x1) << 7)
 					| ((state_0 & 0x80) >> 7)
-					| ((state_1 & 0x7) << 1)
-					| ((state_1 & 0x20) >> 1)
-					| ((state_1 & 0x10) << 1)
-					| ((state_1 & 0x8) << 3);
+					| ((state_1 & 0x17) << 1)
+					| ((state_1 & 0x8) << 3)
+					| ((state_1 & 0x20) >> 1);
+		
+	PORTB &= ~0x1;
+	PORTB |= ((state_0 & 0x2) >> 1);
+	PORTC &= ~0x18;
+	PORTC |= ((state_0 & 0x60) >> 2);
+	PORTD &= ~0xE0;
+	PORTD |= ((state_0 & 0x4) << 5)
+			| ((state_0 & 0x8) << 3)
+			| ((state_0 & 0x10) << 1);
 	
 	MCP23S17_B.write(stateB);
-	
-	PORTB = (PORTB & ~0x1) | (stateA & 0x1);
-	PORTC = (PORTC & 0xE7) | ((stateA & 0x30) >> 1);
-	PORTD = (PORTD & 0x1F)
-			| ((stateA & _BV(1)) << 6)
-			| ((stateA & _BV(2)) << 4)
-			| ((stateA & _BV(3)) << 2);
 }
 
 static int8_t handle_KPLC_IOState_Request(CanardRxTransfer* transfer)
