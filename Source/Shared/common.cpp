@@ -308,7 +308,7 @@ ParamKind parseParamKind(char* name, int len)
 	{
 		const char* pgmPtr = ParamKind_Names[i];
 		uint8_t pgmStringLen = strlen_P(pgmPtr);
-		if (pgmStringLen == pgmStringLen &&
+		if (len == pgmStringLen &&
 			strcmp_P(&nameCopy[0], pgmPtr) == 0)
 		{
 			return (ParamKind)i;
