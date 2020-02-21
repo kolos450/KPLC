@@ -296,9 +296,9 @@ int8_t ProcessIOState(bool forced)
 	uint16_t raw_b = MCP23S17_B.read();
 	
 	uint8_t current[3] = {
-		(uint8_t)~reverse(raw_b >> 8),
-		reverse(raw_a >> 8),
 		(uint8_t)~reverse(raw_a),
+		reverse(raw_a >> 8),
+		(uint8_t)~reverse(raw_b >> 8),
 	};
 	
 	uint8_t tmp = current[1];
