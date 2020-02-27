@@ -36,11 +36,12 @@ int8_t ProcessIOState(bool forced = false);
 
 uint8_t readNodeId()
 {
-	uint8_t val =	((PINC & _BV(PINC5)) >> 5) |
-					((PIND & _BV(PIND0)) << 1) |
-					((PIND & _BV(PIND1)) << 1) |
-					(PIND & (_BV(PIND3) | _BV(PIND4))) |
-					((PINE & _BV(PINE0)) << 5);
+	uint8_t val =	((PINC & _BV(PINC5))) |
+					((PIND & _BV(PIND0)) << 4) |
+					((PIND & _BV(PIND1)) << 2) |
+					((PIND & _BV(PIND3)) >> 1) |
+					((PIND & _BV(PIND4)) >> 3) |
+					((PINE & _BV(PINE0)));
 	return val ^ 0x3F;
 }
 
