@@ -56,4 +56,4 @@ Source/.vs/
 Source/**/Debug/
 Source/**/Release/
 
-!Source/Shared/uavcan/**/debug/
+!Source/Shared/dsdl/**/debug/
