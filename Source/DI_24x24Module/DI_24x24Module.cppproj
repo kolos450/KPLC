@@ -62,6 +62,7 @@
             <Value>%24(PackRepoDir)\atmel\ATmega_DFP\1.2.209\include</Value>
             <Value>../../Shared</Value>
             <Value>../../Shared/canard</Value>
+            <Value>../../Shared/dsdl</Value>
             <Value>..</Value>
           </ListValues>
         </avrgcc.compiler.directories.IncludePaths>
@@ -81,6 +82,7 @@
             <Value>%24(PackRepoDir)\atmel\ATmega_DFP\1.2.209\include</Value>
             <Value>../../Shared</Value>
             <Value>../../Shared/canard</Value>
+            <Value>../../Shared/dsdl</Value>
             <Value>..</Value>
           </ListValues>
         </avrgcccpp.compiler.directories.IncludePaths>
@@ -123,6 +125,7 @@
             <Value>%24(PackRepoDir)\atmel\ATmega_DFP\1.2.209\include</Value>
             <Value>../../Shared</Value>
             <Value>../../Shared/canard</Value>
+            <Value>../../Shared/dsdl</Value>
             <Value>..</Value>
           </ListValues>
         </avrgcc.compiler.directories.IncludePaths>
@@ -143,6 +146,7 @@
             <Value>%24(PackRepoDir)\atmel\ATmega_DFP\1.2.209\include</Value>
             <Value>../../Shared</Value>
             <Value>../../Shared/canard</Value>
+            <Value>../../Shared/dsdl</Value>
             <Value>..</Value>
           </ListValues>
         </avrgcccpp.compiler.directories.IncludePaths>
@@ -311,181 +315,181 @@
       <SubType>compile</SubType>
       <Link>Timer\Timer.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\kplc\IOState.h">
+    <Compile Include="..\Shared\dsdl\kplc\IOState.h">
       <SubType>compile</SubType>
-      <Link>uavcan\kplc\IOState.h</Link>
+      <Link>dsdl\kplc\IOState.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\kplc\kplc_IOState.c">
+    <Compile Include="..\Shared\dsdl\kplc\kplc_IOState.c">
       <SubType>compile</SubType>
-      <Link>uavcan\kplc\kplc_IOState.c</Link>
+      <Link>dsdl\kplc\kplc_IOState.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\AccessCommandShell.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\AccessCommandShell.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\AccessCommandShell.h</Link>
+      <Link>dsdl\uavcan\protocol\AccessCommandShell.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\CANIfaceStats.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\CANIfaceStats.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\CANIfaceStats.h</Link>
+      <Link>dsdl\uavcan\protocol\CANIfaceStats.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\DataTypeKind.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\DataTypeKind.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\DataTypeKind.h</Link>
+      <Link>dsdl\uavcan\protocol\DataTypeKind.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\debug\debug_KeyValue.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\debug\debug_KeyValue.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\debug\debug_KeyValue.c</Link>
+      <Link>dsdl\uavcan\protocol\debug\debug_KeyValue.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\debug\debug_LogLevel.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\debug\debug_LogLevel.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\debug\debug_LogLevel.c</Link>
+      <Link>dsdl\uavcan\protocol\debug\debug_LogLevel.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\debug\debug_LogMessage.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\debug\debug_LogMessage.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\debug\debug_LogMessage.c</Link>
+      <Link>dsdl\uavcan\protocol\debug\debug_LogMessage.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\debug\KeyValue.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\debug\KeyValue.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\debug\KeyValue.h</Link>
+      <Link>dsdl\uavcan\protocol\debug\KeyValue.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\debug\LogLevel.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\debug\LogLevel.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\debug\LogLevel.h</Link>
+      <Link>dsdl\uavcan\protocol\debug\LogLevel.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\debug\LogMessage.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\debug\LogMessage.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\debug\LogMessage.h</Link>
+      <Link>dsdl\uavcan\protocol\debug\LogMessage.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\GetDataTypeInfo.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\GetDataTypeInfo.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\GetDataTypeInfo.h</Link>
+      <Link>dsdl\uavcan\protocol\GetDataTypeInfo.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\GetNodeInfo.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\GetNodeInfo.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\GetNodeInfo.h</Link>
+      <Link>dsdl\uavcan\protocol\GetNodeInfo.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\GetTransportStats.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\GetTransportStats.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\GetTransportStats.h</Link>
+      <Link>dsdl\uavcan\protocol\GetTransportStats.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\GlobalTimeSync.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\GlobalTimeSync.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\GlobalTimeSync.h</Link>
+      <Link>dsdl\uavcan\protocol\GlobalTimeSync.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\HardwareVersion.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\HardwareVersion.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\HardwareVersion.h</Link>
+      <Link>dsdl\uavcan\protocol\HardwareVersion.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\NodeStatus.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\NodeStatus.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\NodeStatus.h</Link>
+      <Link>dsdl\uavcan\protocol\NodeStatus.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\Panic.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\Panic.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\Panic.h</Link>
+      <Link>dsdl\uavcan\protocol\Panic.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\param\Empty.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\param\Empty.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\param\Empty.h</Link>
+      <Link>dsdl\uavcan\protocol\param\Empty.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\param\ExecuteOpcode.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\param\ExecuteOpcode.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\param\ExecuteOpcode.h</Link>
+      <Link>dsdl\uavcan\protocol\param\ExecuteOpcode.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\param\GetSet.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\param\GetSet.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\param\GetSet.h</Link>
+      <Link>dsdl\uavcan\protocol\param\GetSet.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\param\NumericValue.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\param\NumericValue.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\param\NumericValue.h</Link>
+      <Link>dsdl\uavcan\protocol\param\NumericValue.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\param\param_Empty.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\param\param_Empty.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\param\param_Empty.c</Link>
+      <Link>dsdl\uavcan\protocol\param\param_Empty.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\param\param_ExecuteOpcode.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\param\param_ExecuteOpcode.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\param\param_ExecuteOpcode.c</Link>
+      <Link>dsdl\uavcan\protocol\param\param_ExecuteOpcode.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\param\param_GetSet.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\param\param_GetSet.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\param\param_GetSet.c</Link>
+      <Link>dsdl\uavcan\protocol\param\param_GetSet.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\param\param_NumericValue.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\param\param_NumericValue.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\param\param_NumericValue.c</Link>
+      <Link>dsdl\uavcan\protocol\param\param_NumericValue.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\param\param_Value.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\param\param_Value.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\param\param_Value.c</Link>
+      <Link>dsdl\uavcan\protocol\param\param_Value.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\param\Value.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\param\Value.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\param\Value.h</Link>
+      <Link>dsdl\uavcan\protocol\param\Value.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\protocol_AccessCommandShell.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\protocol_AccessCommandShell.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\protocol_AccessCommandShell.c</Link>
+      <Link>dsdl\uavcan\protocol\protocol_AccessCommandShell.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\protocol_CANIfaceStats.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\protocol_CANIfaceStats.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\protocol_CANIfaceStats.c</Link>
+      <Link>dsdl\uavcan\protocol\protocol_CANIfaceStats.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\protocol_DataTypeKind.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\protocol_DataTypeKind.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\protocol_DataTypeKind.c</Link>
+      <Link>dsdl\uavcan\protocol\protocol_DataTypeKind.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\protocol_GetDataTypeInfo.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\protocol_GetDataTypeInfo.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\protocol_GetDataTypeInfo.c</Link>
+      <Link>dsdl\uavcan\protocol\protocol_GetDataTypeInfo.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\protocol_GetNodeInfo.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\protocol_GetNodeInfo.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\protocol_GetNodeInfo.c</Link>
+      <Link>dsdl\uavcan\protocol\protocol_GetNodeInfo.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\protocol_GetTransportStats.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\protocol_GetTransportStats.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\protocol_GetTransportStats.c</Link>
+      <Link>dsdl\uavcan\protocol\protocol_GetTransportStats.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\protocol_GlobalTimeSync.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\protocol_GlobalTimeSync.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\protocol_GlobalTimeSync.c</Link>
+      <Link>dsdl\uavcan\protocol\protocol_GlobalTimeSync.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\protocol_HardwareVersion.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\protocol_HardwareVersion.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\protocol_HardwareVersion.c</Link>
+      <Link>dsdl\uavcan\protocol\protocol_HardwareVersion.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\protocol_NodeStatus.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\protocol_NodeStatus.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\protocol_NodeStatus.c</Link>
+      <Link>dsdl\uavcan\protocol\protocol_NodeStatus.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\protocol_Panic.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\protocol_Panic.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\protocol_Panic.c</Link>
+      <Link>dsdl\uavcan\protocol\protocol_Panic.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\protocol_RestartNode.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\protocol_RestartNode.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\protocol_RestartNode.c</Link>
+      <Link>dsdl\uavcan\protocol\protocol_RestartNode.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\protocol_SoftwareVersion.c">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\protocol_SoftwareVersion.c">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\protocol_SoftwareVersion.c</Link>
+      <Link>dsdl\uavcan\protocol\protocol_SoftwareVersion.c</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\RestartNode.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\RestartNode.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\RestartNode.h</Link>
+      <Link>dsdl\uavcan\protocol\RestartNode.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\protocol\SoftwareVersion.h">
+    <Compile Include="..\Shared\dsdl\uavcan\protocol\SoftwareVersion.h">
       <SubType>compile</SubType>
-      <Link>uavcan\protocol\SoftwareVersion.h</Link>
+      <Link>dsdl\uavcan\protocol\SoftwareVersion.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\Timestamp.h">
+    <Compile Include="..\Shared\dsdl\uavcan\Timestamp.h">
       <SubType>compile</SubType>
-      <Link>uavcan\Timestamp.h</Link>
+      <Link>dsdl\uavcan\Timestamp.h</Link>
     </Compile>
-    <Compile Include="..\Shared\uavcan\uavcan_Timestamp.c">
+    <Compile Include="..\Shared\dsdl\uavcan\uavcan_Timestamp.c">
       <SubType>compile</SubType>
-      <Link>uavcan\uavcan_Timestamp.c</Link>
+      <Link>dsdl\uavcan\uavcan_Timestamp.c</Link>
     </Compile>
     <Compile Include="can_config.h">
       <SubType>compile</SubType>
@@ -520,11 +524,6 @@
     <Folder Include="canard\" />
     <Folder Include="MCP23S17\" />
     <Folder Include="Timer\" />
-    <Folder Include="uavcan\" />
-    <Folder Include="uavcan\kplc\" />
-    <Folder Include="uavcan\protocol\" />
-    <Folder Include="uavcan\protocol\debug\" />
-    <Folder Include="uavcan\protocol\param\" />
   </ItemGroup>
   <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets" />
 </Project>
