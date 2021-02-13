@@ -5,25 +5,35 @@
  *
  * Source file: C:\Sources\UAVCAN-dsdl\uavcan\kplc\200.IOState.uavcan
  */
-#include "uavcan\kplc\IOState.h"
+#include "kplc\IOState.h"
 #include "canard.h"
 
 #ifndef CANARD_INTERNAL_SATURATE
 #define CANARD_INTERNAL_SATURATE(x, max) ( ((x) > max) ? max : ( (-(x) > max) ? (-max) : (x) ) );
 #endif
 
-#define CANARD_INTERNAL_ENABLE_TAO  ((uint8_t) 1)
-#define CANARD_INTERNAL_DISABLE_TAO ((uint8_t) 0)
+#ifndef CANARD_INTERNAL_SATURATE_UNSIGNED
+#define CANARD_INTERNAL_SATURATE_UNSIGNED(x, max) ( ((x) >= max) ? max : (x) );
+#endif
+
+#if defined(__GNUC__)
+# define CANARD_MAYBE_UNUSED(x) x __attribute__((unused))
+#else
+# define CANARD_MAYBE_UNUSED(x) x
+#endif
 
 /**
-  * @brief uavcan_kplc_IOStateRequest_encode_internal
+  * @brief kplc_IOStateRequest_encode_internal
   * @param source : pointer to source data struct
   * @param msg_buf: pointer to msg storage
   * @param offset: bit offset to msg storage
   * @param root_item: for detecting if TAO should be used
-  * @retval returns offset
+  * @retval returns new offset
   */
-uint32_t uavcan_kplc_IOStateRequest_encode_internal(uavcan_kplc_IOStateRequest* source, void* msg_buf, uint32_t offset, uint8_t root_item)
+uint32_t kplc_IOStateRequest_encode_internal(kplc_IOStateRequest* source,
+  void* msg_buf,
+  uint32_t offset,
+  uint8_t CANARD_MAYBE_UNUSED(root_item))
 {
     uint32_t c = 0;
 
@@ -45,33 +55,37 @@ uint32_t uavcan_kplc_IOStateRequest_encode_internal(uavcan_kplc_IOStateRequest* 
 }
 
 /**
-  * @brief uavcan_kplc_IOStateRequest_encode
+  * @brief kplc_IOStateRequest_encode
   * @param source : Pointer to source data struct
   * @param msg_buf: Pointer to msg storage
   * @retval returns message length as bytes
   */
-uint32_t uavcan_kplc_IOStateRequest_encode(uavcan_kplc_IOStateRequest* source, void* msg_buf)
+uint32_t kplc_IOStateRequest_encode(kplc_IOStateRequest* source, void* msg_buf)
 {
     uint32_t offset = 0;
 
-    offset = uavcan_kplc_IOStateRequest_encode_internal(source, msg_buf, offset, 1);
+    offset = kplc_IOStateRequest_encode_internal(source, msg_buf, offset, 1);
 
     return (offset + 7 ) / 8;
 }
 
 /**
-  * @brief uavcan_kplc_IOStateRequest_decode_internal
+  * @brief kplc_IOStateRequest_decode_internal
   * @param transfer: Pointer to CanardRxTransfer transfer
   * @param payload_len: Payload message length
   * @param dest: Pointer to destination struct
   * @param dyn_arr_buf: NULL or Pointer to memory storage to be used for dynamic arrays
-  *                     uavcan_kplc_IOStateRequest dyn memory will point to dyn_arr_buf memory.
+  *                     kplc_IOStateRequest dyn memory will point to dyn_arr_buf memory.
   *                     NULL will ignore dynamic arrays decoding.
   * @param offset: Call with 0, bit offset to msg storage
-  * @param tao: is tail array optimization used
-  * @retval offset or ERROR value if < 0
+  * @retval new offset or ERROR value if < 0
   */
-int32_t uavcan_kplc_IOStateRequest_decode_internal(const CanardRxTransfer* transfer, uint16_t payload_len, uavcan_kplc_IOStateRequest* dest, uint8_t** dyn_arr_buf, int32_t offset, uint8_t tao)
+int32_t kplc_IOStateRequest_decode_internal(
+  const CanardRxTransfer* transfer,
+  uint16_t CANARD_MAYBE_UNUSED(payload_len),
+  kplc_IOStateRequest* dest,
+  uint8_t** CANARD_MAYBE_UNUSED(dyn_arr_buf),
+  int32_t offset)
 {
     int32_t ret = 0;
     uint32_t c = 0;
@@ -79,10 +93,10 @@ int32_t uavcan_kplc_IOStateRequest_decode_internal(const CanardRxTransfer* trans
     // Static array (state)
     for (c = 0; c < 3; c++)
     {
-        ret = canardDecodeScalar(transfer, offset, 8, false, (void*)(dest->state + c));
+        ret = canardDecodeScalar(transfer, (uint32_t)offset, 8, false, (void*)(dest->state + c));
         if (ret != 8)
         {
-            goto uavcan_kplc_IOStateRequest_error_exit;
+            goto kplc_IOStateRequest_error_exit;
         }
         offset += 8;
     }
@@ -90,16 +104,16 @@ int32_t uavcan_kplc_IOStateRequest_decode_internal(const CanardRxTransfer* trans
     // Static array (state_inv)
     for (c = 0; c < 3; c++)
     {
-        ret = canardDecodeScalar(transfer, offset, 8, false, (void*)(dest->state_inv + c));
+        ret = canardDecodeScalar(transfer, (uint32_t)offset, 8, false, (void*)(dest->state_inv + c));
         if (ret != 8)
         {
-            goto uavcan_kplc_IOStateRequest_error_exit;
+            goto kplc_IOStateRequest_error_exit;
         }
         offset += 8;
     }
     return offset;
 
-uavcan_kplc_IOStateRequest_error_exit:
+kplc_IOStateRequest_error_exit:
     if (ret < 0)
     {
         return ret;
@@ -111,60 +125,46 @@ uavcan_kplc_IOStateRequest_error_exit:
 }
 
 /**
-  * @brief uavcan_kplc_IOStateRequest_decode
+  * @brief kplc_IOStateRequest_decode
   * @param transfer: Pointer to CanardRxTransfer transfer
   * @param payload_len: Payload message length
   * @param dest: Pointer to destination struct
   * @param dyn_arr_buf: NULL or Pointer to memory storage to be used for dynamic arrays
-  *                     uavcan_kplc_IOStateRequest dyn memory will point to dyn_arr_buf memory.
+  *                     kplc_IOStateRequest dyn memory will point to dyn_arr_buf memory.
   *                     NULL will ignore dynamic arrays decoding.
   * @retval offset or ERROR value if < 0
   */
-int32_t uavcan_kplc_IOStateRequest_decode(const CanardRxTransfer* transfer, uint16_t payload_len, uavcan_kplc_IOStateRequest* dest, uint8_t** dyn_arr_buf)
+int32_t kplc_IOStateRequest_decode(const CanardRxTransfer* transfer,
+  uint16_t payload_len,
+  kplc_IOStateRequest* dest,
+  uint8_t** dyn_arr_buf)
 {
     const int32_t offset = 0;
     int32_t ret = 0;
 
-    /* Backward compatibility support for removing TAO
-     *  - first try to decode with TAO DISABLED
-     *  - if it fails fall back to TAO ENABLED
-     */
-    uint8_t tao = CANARD_INTERNAL_DISABLE_TAO;
-
-    while (1)
+    // Clear the destination struct
+    for (uint32_t c = 0; c < sizeof(kplc_IOStateRequest); c++)
     {
-        // Clear the destination struct
-        for (uint32_t c = 0; c < sizeof(uavcan_kplc_IOStateRequest); c++)
-        {
-            ((uint8_t*)dest)[c] = 0x00;
-        }
-
-        ret = uavcan_kplc_IOStateRequest_decode_internal(transfer, payload_len, dest, dyn_arr_buf, offset, tao);
-
-        if (ret >= 0)
-        {
-            break;
-        }
-
-        if (tao == CANARD_INTERNAL_ENABLE_TAO)
-        {
-            break;
-        }
-        tao = CANARD_INTERNAL_ENABLE_TAO;
+        ((uint8_t*)dest)[c] = 0x00;
     }
+
+    ret = kplc_IOStateRequest_decode_internal(transfer, payload_len, dest, dyn_arr_buf, offset);
 
     return ret;
 }
 
 /**
-  * @brief uavcan_kplc_IOStateResponse_encode_internal
+  * @brief kplc_IOStateResponse_encode_internal
   * @param source : pointer to source data struct
   * @param msg_buf: pointer to msg storage
   * @param offset: bit offset to msg storage
   * @param root_item: for detecting if TAO should be used
-  * @retval returns offset
+  * @retval returns new offset
   */
-uint32_t uavcan_kplc_IOStateResponse_encode_internal(uavcan_kplc_IOStateResponse* source, void* msg_buf, uint32_t offset, uint8_t root_item)
+uint32_t kplc_IOStateResponse_encode_internal(kplc_IOStateResponse* source,
+  void* msg_buf,
+  uint32_t offset,
+  uint8_t CANARD_MAYBE_UNUSED(root_item))
 {
     canardEncodeScalar(msg_buf, offset, 8, (void*)&source->status); // 255
     offset += 8;
@@ -173,45 +173,49 @@ uint32_t uavcan_kplc_IOStateResponse_encode_internal(uavcan_kplc_IOStateResponse
 }
 
 /**
-  * @brief uavcan_kplc_IOStateResponse_encode
+  * @brief kplc_IOStateResponse_encode
   * @param source : Pointer to source data struct
   * @param msg_buf: Pointer to msg storage
   * @retval returns message length as bytes
   */
-uint32_t uavcan_kplc_IOStateResponse_encode(uavcan_kplc_IOStateResponse* source, void* msg_buf)
+uint32_t kplc_IOStateResponse_encode(kplc_IOStateResponse* source, void* msg_buf)
 {
     uint32_t offset = 0;
 
-    offset = uavcan_kplc_IOStateResponse_encode_internal(source, msg_buf, offset, 1);
+    offset = kplc_IOStateResponse_encode_internal(source, msg_buf, offset, 1);
 
     return (offset + 7 ) / 8;
 }
 
 /**
-  * @brief uavcan_kplc_IOStateResponse_decode_internal
+  * @brief kplc_IOStateResponse_decode_internal
   * @param transfer: Pointer to CanardRxTransfer transfer
   * @param payload_len: Payload message length
   * @param dest: Pointer to destination struct
   * @param dyn_arr_buf: NULL or Pointer to memory storage to be used for dynamic arrays
-  *                     uavcan_kplc_IOStateResponse dyn memory will point to dyn_arr_buf memory.
+  *                     kplc_IOStateResponse dyn memory will point to dyn_arr_buf memory.
   *                     NULL will ignore dynamic arrays decoding.
   * @param offset: Call with 0, bit offset to msg storage
-  * @param tao: is tail array optimization used
-  * @retval offset or ERROR value if < 0
+  * @retval new offset or ERROR value if < 0
   */
-int32_t uavcan_kplc_IOStateResponse_decode_internal(const CanardRxTransfer* transfer, uint16_t payload_len, uavcan_kplc_IOStateResponse* dest, uint8_t** dyn_arr_buf, int32_t offset, uint8_t tao)
+int32_t kplc_IOStateResponse_decode_internal(
+  const CanardRxTransfer* transfer,
+  uint16_t CANARD_MAYBE_UNUSED(payload_len),
+  kplc_IOStateResponse* dest,
+  uint8_t** CANARD_MAYBE_UNUSED(dyn_arr_buf),
+  int32_t offset)
 {
     int32_t ret = 0;
 
-    ret = canardDecodeScalar(transfer, offset, 8, false, (void*)&dest->status);
+    ret = canardDecodeScalar(transfer, (uint32_t)offset, 8, false, (void*)&dest->status);
     if (ret != 8)
     {
-        goto uavcan_kplc_IOStateResponse_error_exit;
+        goto kplc_IOStateResponse_error_exit;
     }
     offset += 8;
     return offset;
 
-uavcan_kplc_IOStateResponse_error_exit:
+kplc_IOStateResponse_error_exit:
     if (ret < 0)
     {
         return ret;
@@ -223,47 +227,30 @@ uavcan_kplc_IOStateResponse_error_exit:
 }
 
 /**
-  * @brief uavcan_kplc_IOStateResponse_decode
+  * @brief kplc_IOStateResponse_decode
   * @param transfer: Pointer to CanardRxTransfer transfer
   * @param payload_len: Payload message length
   * @param dest: Pointer to destination struct
   * @param dyn_arr_buf: NULL or Pointer to memory storage to be used for dynamic arrays
-  *                     uavcan_kplc_IOStateResponse dyn memory will point to dyn_arr_buf memory.
+  *                     kplc_IOStateResponse dyn memory will point to dyn_arr_buf memory.
   *                     NULL will ignore dynamic arrays decoding.
   * @retval offset or ERROR value if < 0
   */
-int32_t uavcan_kplc_IOStateResponse_decode(const CanardRxTransfer* transfer, uint16_t payload_len, uavcan_kplc_IOStateResponse* dest, uint8_t** dyn_arr_buf)
+int32_t kplc_IOStateResponse_decode(const CanardRxTransfer* transfer,
+  uint16_t payload_len,
+  kplc_IOStateResponse* dest,
+  uint8_t** dyn_arr_buf)
 {
     const int32_t offset = 0;
     int32_t ret = 0;
 
-    /* Backward compatibility support for removing TAO
-     *  - first try to decode with TAO DISABLED
-     *  - if it fails fall back to TAO ENABLED
-     */
-    uint8_t tao = CANARD_INTERNAL_DISABLE_TAO;
-
-    while (1)
+    // Clear the destination struct
+    for (uint32_t c = 0; c < sizeof(kplc_IOStateResponse); c++)
     {
-        // Clear the destination struct
-        for (uint32_t c = 0; c < sizeof(uavcan_kplc_IOStateResponse); c++)
-        {
-            ((uint8_t*)dest)[c] = 0x00;
-        }
-
-        ret = uavcan_kplc_IOStateResponse_decode_internal(transfer, payload_len, dest, dyn_arr_buf, offset, tao);
-
-        if (ret >= 0)
-        {
-            break;
-        }
-
-        if (tao == CANARD_INTERNAL_ENABLE_TAO)
-        {
-            break;
-        }
-        tao = CANARD_INTERNAL_ENABLE_TAO;
+        ((uint8_t*)dest)[c] = 0x00;
     }
+
+    ret = kplc_IOStateResponse_decode_internal(transfer, payload_len, dest, dyn_arr_buf, offset);
 
     return ret;
 }
