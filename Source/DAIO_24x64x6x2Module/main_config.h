@@ -8,7 +8,7 @@
 
 #define APP_VERSION_MAJOR                       1
 #define APP_VERSION_MINOR                       0
-#define APP_NODE_NAME                           "KPLC.DO_OE_24x20Module"
+#define APP_NODE_NAME                           "DAIO_24x64x6x2Module"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof((a)[0]))
 

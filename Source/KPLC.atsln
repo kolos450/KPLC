@@ -9,6 +9,8 @@ Project("{E66E83B9-2572-4076-B26E-6BE79FF3018A}") = "DIO_24x24x14Module", "DIO_2
 EndProject
 Project("{E66E83B9-2572-4076-B26E-6BE79FF3018A}") = "DO_OE_24x20Module", "DO_OE_24x20Module\DO_OE_24x20Module.cppproj", "{F17B6008-05A3-490B-B8C9-6C14421FF349}"
 EndProject
+Project("{E66E83B9-2572-4076-B26E-6BE79FF3018A}") = "DAIO_24x64x6x2Module", "DAIO_24x64x6x2Module\DAIO_24x64x6x2Module.cppproj", "{63F64581-8EED-4880-A4FB-B5E25A5E35C1}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|AVR = Debug|AVR
@@ -27,6 +29,10 @@ Global
 		{F17B6008-05A3-490B-B8C9-6C14421FF349}.Debug|AVR.Build.0 = Debug|AVR
 		{F17B6008-05A3-490B-B8C9-6C14421FF349}.Release|AVR.ActiveCfg = Release|AVR
 		{F17B6008-05A3-490B-B8C9-6C14421FF349}.Release|AVR.Build.0 = Release|AVR
+		{63F64581-8EED-4880-A4FB-B5E25A5E35C1}.Debug|AVR.ActiveCfg = Debug|AVR
+		{63F64581-8EED-4880-A4FB-B5E25A5E35C1}.Debug|AVR.Build.0 = Debug|AVR
+		{63F64581-8EED-4880-A4FB-B5E25A5E35C1}.Release|AVR.ActiveCfg = Release|AVR
+		{63F64581-8EED-4880-A4FB-B5E25A5E35C1}.Release|AVR.Build.0 = Release|AVR
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
