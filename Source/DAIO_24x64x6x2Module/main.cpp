@@ -8,6 +8,8 @@
 #include "common.h"
 
 #include "kplc/IOState.h"
+#include "kplc/IOState_float16x2.h"
+#include "kplc/IOState_uint8x7.h"
 #include "uavcan/protocol/GetNodeInfo.h"
 #include "uavcan/protocol/NodeStatus.h"
 #include "uavcan/protocol/Panic.h"
@@ -21,9 +23,11 @@ uint8_t g_canard_memory_pool[1024];   // Arena for memory allocation, used by th
 
 #define IOSTATE_LPF_TIME_OFFSET_UNSET 0xFF
 #define IOSTATE_LPF_TIME_MS 20
-static uint8_t g_ioState[3];
-static uint8_t g_ioStateStaging[3];
-static uint8_t g_ioStateLpfTimeOffsets[8 * 3];
+constexpr int InputsCount = 56;
+constexpr int InputsBufferLength = InputsCount / 8;
+static uint8_t g_ioState[InputsBufferLength];
+static uint8_t g_ioStateStaging[InputsBufferLength];
+static uint8_t g_ioStateLpfTimeOffsets[InputsCount];
 static uint32_t g_ioStateLpfTimeReference = 0;
 
 
@@ -33,13 +37,54 @@ int8_t ProcessIOState(bool forced = false);
 
 uint8_t readNodeId()
 {
-	// TODO
-	uint8_t val =	((PINC & _BV(PINC5))) |
-					((PIND & _BV(PIND0)) << 4) |
-					((PIND & _BV(PIND1)) << 2) |
-					((PIND & _BV(PIND3)) >> 1) |
-					((PIND & _BV(PIND4)) >> 3);
-	return val ^ 0x3F;
+	// Charlieplexing.
+	// ID0 = PA2
+	// ID1 = PA3
+	// ID2 = PA4
+	
+	int result = 0;
+	
+	// Initialization.
+	DDRA &= ~(_BV(PINA2) | _BV(PINA3) | _BV(PINA4));
+	PORTA &= ~(_BV(PINA2) | _BV(PINA3) | _BV(PINA4));
+	
+	// Pull-up A3, A4.
+	PORTA |= _BV(PINA3) | _BV(PINA4);
+	// Make A2 low.	
+	DDRA |= _BV(PINA2);
+	// Read bit 1, bit 5.
+	if (!(PINA & _BV(PINA3))) result |= _BV(0);
+	if (!(PINA & _BV(PINA4))) result |= _BV(4);
+	
+	// Reset.
+	DDRA &= ~(_BV(PINA2) | _BV(PINA3) | _BV(PINA4));
+	PORTA &= ~(_BV(PINA2) | _BV(PINA3) | _BV(PINA4));
+	
+	// Pull-up A2, A4.
+	PORTA |= _BV(PINA2) | _BV(PINA4);
+	// Make A3 low.
+	DDRA |= _BV(PINA3);
+	// Read bit 3, bit 2.
+	if (!(PINA & _BV(PINA2))) result |= _BV(2);
+	if (!(PINA & _BV(PINA4))) result |= _BV(1);
+	
+	// Reset.
+	DDRA &= ~(_BV(PINA2) | _BV(PINA3) | _BV(PINA4));
+	PORTA &= ~(_BV(PINA2) | _BV(PINA3) | _BV(PINA4));
+	
+	// Pull-up A2, A3.
+	PORTA |= _BV(PINA2) | _BV(PINA3);
+	// Make A4 low.
+	DDRA |= _BV(PINA4);
+	// Read bit 6, bit 4.
+	if (!(PINA & _BV(PINA2))) result |= _BV(5);
+	if (!(PINA & _BV(PINA3))) result |= _BV(3);
+	
+	// Reset.
+	DDRA &= ~(_BV(PINA2) | _BV(PINA3) | _BV(PINA4));
+	PORTA &= ~(_BV(PINA2) | _BV(PINA3) | _BV(PINA4));
+	
+	return result;
 }
 
 static int8_t ValidateIOStateRequest(kplc_IOStateRequest request)
@@ -57,7 +102,16 @@ static int8_t ValidateIOStateRequest(kplc_IOStateRequest request)
 
 static void ApplyIOState(uint8_t* state)
 {
-	// TODO
+	auto porta = PORTA & ~(_BV(PORTA5) | _BV(PORTA6) | _BV(PORTA7));
+	if (state[0] & _BV(0)) porta |= _BV(PORTA7); // McOut0
+	if (state[0] & _BV(1)) porta |= _BV(PORTA6); // McOut1
+	if (state[0] & _BV(2)) porta |= _BV(PORTA5); // McOut2
+	PORTA = porta;
+	
+	auto portb = PORTB & ~(_BV(PORTA0) | _BV(PORTA1));
+	if (state[0] & _BV(3)) portb |= _BV(PORTA1); // McOut3
+	if (state[0] & _BV(4)) portb |= _BV(PORTA0); // McOut4
+	PORTB = portb;
 }
 
 static int8_t handle_KPLC_IOState_Request(CanardRxTransfer* transfer)
@@ -298,23 +352,18 @@ void ProcessIOStateTimerCallback(uint8_t _)
 
 uint8_t sendIOState()
 {
-	uint8_t buffer[KPLC_IOSTATE_REQUEST_MAX_SIZE];
+	uint8_t buffer[KPLC_IOSTATE_UINT8X7_REQUEST_MAX_SIZE];
 	static uint8_t transfer_id = 0;
 	
-	kplc_IOStateRequest request;
-	for (uint8_t i = 0; i < 3; i++)
-	{
-		uint8_t state = g_ioState[i];
-		request.state[i] = state;
-		request.state_inv[i] = ~state;
-	}
+	kplc_IOState_uint8x7Request request;
+	memcpy(request.state, g_ioState, InputsBufferLength);
 
-	uint16_t len = kplc_IOStateRequest_encode(&request, &buffer[0]);
+	uint16_t len = kplc_IOState_uint8x7Request_encode(&request, &buffer[0]);
 	
 	int16_t result = canardRequestOrRespond(&g_canard,
 		MAIN_MODULE_NODE_ID,
-		KPLC_IOSTATE_SIGNATURE,
-		KPLC_IOSTATE_ID,
+		KPLC_IOSTATE_UINT8X7_SIGNATURE,
+		KPLC_IOSTATE_UINT8X7_ID,
 		&transfer_id,
 		CANARD_TRANSFER_PRIORITY_MEDIUM,
 		CanardRequest,
@@ -336,17 +385,25 @@ uint8_t reverse(uint8_t b)
 	return b;
 }
 
-int8_t ProcessIOState(bool forced)
+void FetchInputs(uint8_t* buffer)
 {
-	// TODO
+	for (int i = 0; i < 7; i++)
+	{
+		PORTD = _BV(i);
+		DDRD = _BV(i);
+		buffer[i] = PINC;
+	}
 	
-	uint8_t current[3] = {
-		(uint8_t)0,
-		(uint8_t)0,
-		(uint8_t)0,
-	};
+	DDRD = 0;
+	PORTD = 0;
+}
+
+int8_t ProcessDigitalInputs(bool forced)
+{
+	uint8_t current[InputsBufferLength];
+	FetchInputs(&current[0]);
 	
-	uint8_t result[3];
+	uint8_t result[InputsBufferLength];
 	memcpy(&result[0], &g_ioState[0], sizeof(g_ioState));
 	
 	uint32_t now = millis();
@@ -357,7 +414,7 @@ int8_t ProcessIOState(bool forced)
 	
 	uint8_t resultUpdated = false;
 	
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < InputsBufferLength; i++)
 	{
 		for (int j = 0; j < 8; j++)
 		{
@@ -410,31 +467,120 @@ int8_t ProcessIOState(bool forced)
 	return 0;
 }
 
-void setLed()
+constexpr uint8_t AdcCount = 2;
+static uint8_t g_adcValues[AdcCount];
+
+uint8_t LowPassFilterAnalogInput(uint8_t channel, uint8_t value)
 {
-	// TODO
-	/*PORTE |= _BV(PORTE1);*/
+	if (g_adcValues[channel] != value)
+	{
+		g_adcValues[channel] = value;
+		return true;
+	}
+	
+	return false;
 }
 
-void resetLed()
+uint8_t SendAnalogInputs()
 {
 	// TODO
-	/*PORTE &= ~_BV(PORTE1);*/
+	return -1;
 }
 
-ISR(INT0_vect)
+uint8_t ProcessAnalogInputs(bool forced) 
+{
+	static uint8_t adcChannel = 0xFF;
+	
+	if (adcChannel == 0xFF)
+	{
+		adcChannel = 0;
+		// Start the conversion.
+		ADCSRA |= _BV(ADSC);
+	}
+	else
+	{
+		// ADSC is cleared when the conversion finishes.
+		if (ADCSRA & _BV(ADSC))
+		{
+			uint8_t adcValue = ADCH; // 8 bits, 0 to 255.
+	
+			if (LowPassFilterAnalogInput(adcChannel, adcValue))
+			{
+				auto result = SendAnalogInputs();
+				if (result < 0) {
+					return result;
+				}
+			}
+	
+			// Setup the next channel.
+			adcChannel = 1 - adcChannel;
+			auto admux = ADMUX & ~(_BV(MUX0) | _BV(MUX1) | _BV(MUX2) | _BV(MUX3) | _BV(MUX4));
+			switch (adcChannel)
+			{
+				case 0:
+					break;
+				case 1:
+					admux |= _BV(MUX0);
+					break;
+			}
+			ADMUX = admux;
+	
+			// Start the conversion.
+			ADCSRA |= _BV(ADSC);
+		}
+	}
+	
+	return 0;
+}
+
+uint8_t InitializeAnalogInputs()
+{
+	memset(g_adcValues, 0, AdcCount);
+	
+	ADMUX |= 
+		_BV(ADLAR); // ADC Left Adjust Result.
+	ADCSRA |= 
+		_BV(ADEN) | // Enable ADC.
+		_BV(ADPS1); // Division factor = 4.
+		
+	return 0;
+}
+
+int8_t ProcessIOState(bool forced)
+{
+	uint8_t ret;
+	
+	ret = ProcessDigitalInputs(forced);
+	if (ret < 0) return ret;
+	
+	ret = ProcessAnalogInputs(forced);
+	
+	return ret;
+}
+
+ISR(INT2_vect)
 {
 	handleCanRxInterrupt();
 }
 
 void enableCanRxInterrupt()
 {
-	EIMSK |= _BV(INT0);
+	EIMSK |= _BV(INT2);
 }
 
 void disableCanRxInterrupt()
 {
-	EIMSK &= ~_BV(INT0);
+	EIMSK &= ~_BV(INT2);
+}
+
+void setLed()
+{
+	PORTB |= _BV(PORTB4);
+}
+
+void resetLed()
+{
+	PORTB &= ~_BV(PORTB4);
 }
 
 int main(void)
@@ -442,24 +588,24 @@ int main(void)
 	wdt_enable(WDTO_250MS);
 	wdt_reset();
 	
-	//DDRE |= _BV(PORTE1); // LED
-	DDRB |= _BV(PORTB1); // MCP2515 Reset
+	DDRA = _BV(PORTA5) | _BV(PORTA6) | _BV(PORTA7); // McOut2..0
+	DDRB = 
+		_BV(PORTB0) /* McOut4 */ | _BV(PORTB1) /* McOut3 */ |
+		_BV(PORTB3) /* MCP2515 Reset */ | _BV(PORTB4) /* MCP2515 CS, Led */ |
+		_BV(PORTB5) /* SPI MOSI */ | _BV(PORTB7) /* SPI SCK */;
 	
-	// McOut[8..13]
-	DDRB |= _BV(PORTB0);
-	DDRC |= _BV(PORTC3) | _BV(PORTC4);
-	DDRD |= _BV(PORTD5) | _BV(PORTD6) | _BV(PORTD7);
-	
-	PORTB |= _BV(PORTB1);
-	PORTC |= _BV(PORTC5);
-	PORTD |= _BV(PORTD0) | _BV(PORTD1) | _BV(PORTD3) | _BV(PORTD4);
-	//PORTE |= _BV(PORTE0);
+	PORTB |= _BV(PORTB3); // MCP2515 Reset
 	
 	memset(&g_ioStateLpfTimeOffsets, IOSTATE_LPF_TIME_OFFSET_UNSET, sizeof(g_ioStateLpfTimeOffsets));
 	memset(&g_ioState, 0, sizeof(g_ioState));
 	memset(&g_ioStateStaging, 0, sizeof(g_ioStateStaging));
 	
 	int8_t result;
+	
+	result = InitializeAnalogInputs();
+	if (result < 0) {
+		fail(result);
+	}
 	
 	result = setup();
 	if (result < 0) {
@@ -468,11 +614,9 @@ int main(void)
 	
 	g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_OPERATIONAL;
 	
-	setLed();
-	
 	// Set up MCP2515 interrupt.
-	EICRA = _BV(ISC01);	// Trigger INT0 on falling edge
-	EIMSK = _BV(INT0);	// Enable INT0
+	EICRA |= _BV(ISC21);	// Trigger INT2 on falling edge
+	EIMSK |= _BV(INT2);		// Enable INT2
 	
 	sei();
 	
@@ -545,11 +689,9 @@ int main(void)
 			}
 			case NodeState_Error:
 			{
-				// Set all outputs to the low state.
-				// TODO
-				PORTB &= ~_BV(PORTB0);
-				PORTC &= ~(_BV(PORTC3) | _BV(PORTC4));
-				PORTD &= ~(_BV(PORTD5) | _BV(PORTD6) | _BV(PORTD7));
+				// Set McOut0..5 low.
+				PORTA &= ~(_BV(PORTA5) | _BV(PORTA6) | _BV(PORTA7));
+				PORTB &= ~(_BV(PORTB0) | _BV(PORTB1));
 
 				cli();
 				

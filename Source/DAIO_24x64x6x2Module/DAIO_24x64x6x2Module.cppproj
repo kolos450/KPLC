@@ -315,6 +315,22 @@
       <SubType>compile</SubType>
       <Link>dsdl\kplc\kplc_IOState.c</Link>
     </Compile>
+    <Compile Include="..\Shared\dsdl\kplc\IOState_float16x2.h">
+      <SubType>compile</SubType>
+      <Link>dsdl\kplc\IOState_float16x2.h</Link>
+    </Compile>
+    <Compile Include="..\Shared\dsdl\kplc\kplc_IOState_float16x2.c">
+      <SubType>compile</SubType>
+      <Link>dsdl\kplc\kplc_IOState_float16x2.c</Link>
+    </Compile>
+    <Compile Include="..\Shared\dsdl\kplc\IOState_uint8x7.h">
+      <SubType>compile</SubType>
+      <Link>dsdl\kplc\IOState_uint8x7.h</Link>
+    </Compile>
+    <Compile Include="..\Shared\dsdl\kplc\kplc_IOState_uint8x7.c">
+      <SubType>compile</SubType>
+      <Link>dsdl\kplc\kplc_IOState_uint8x7.c</Link>
+    </Compile>
     <Compile Include="..\Shared\dsdl\uavcan\protocol\AccessCommandShell.h">
       <SubType>compile</SubType>
       <Link>dsdl\uavcan\protocol\AccessCommandShell.h</Link>
