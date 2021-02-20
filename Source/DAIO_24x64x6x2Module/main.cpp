@@ -8,8 +8,7 @@
 #include "common.h"
 
 #include "kplc/IOState.h"
-#include "kplc/IOState_float16x2.h"
-#include "kplc/IOState_uint8x7.h"
+#include "kplc/IOStateFrame.h"
 #include "uavcan/protocol/GetNodeInfo.h"
 #include "uavcan/protocol/NodeStatus.h"
 #include "uavcan/protocol/Panic.h"
@@ -23,13 +22,24 @@ uint8_t g_canard_memory_pool[1024];   // Arena for memory allocation, used by th
 
 #define IOSTATE_LPF_TIME_OFFSET_UNSET 0xFF
 #define IOSTATE_LPF_TIME_MS 20
-constexpr int InputsCount = 56;
+constexpr int InputsCount = 64;
 constexpr int InputsBufferLength = InputsCount / 8;
 static uint8_t g_ioState[InputsBufferLength];
 static uint8_t g_ioStateStaging[InputsBufferLength];
 static uint8_t g_ioStateLpfTimeOffsets[InputsCount];
 static uint32_t g_ioStateLpfTimeReference = 0;
 
+enum IOStateFrameIndex : uint8_t { 
+	IOStateFrameIndex_None = 0,
+	IOStateFrameIndex_0 = 1 << 0, 
+	IOStateFrameIndex_1 = 1 << 1,
+	IOStateFrameIndex_Max = IOStateFrameIndex_1,
+	IOStateFrameIndex_All = IOStateFrameIndex_0 | IOStateFrameIndex_1,
+};
+	
+IOStateFrameIndex getFrameIndex(uint8_t digitalInputIndex) {
+	return (IOStateFrameIndex)(1 << (digitalInputIndex / 8 / KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH));
+}
 
 Timer<4> g_timers;
 
@@ -165,11 +175,11 @@ static int8_t handle_KPLC_IOState_Request(CanardRxTransfer* transfer)
 	return 0;
 }
 
-static int8_t handle_KPLC_IOState_Response(CanardRxTransfer* transfer)
+static int8_t handle_KPLC_IOStateFrame_Response(CanardRxTransfer* transfer)
 {
-	kplc_IOStateResponse response;
+	kplc_IOStateFrameResponse response;
 	int8_t ret;
-	ret = kplc_IOStateResponse_decode(transfer, transfer->payload_len, &response, NULL);
+	ret = kplc_IOStateFrameResponse_decode(transfer, transfer->payload_len, &response, NULL);
 	if (ret < 0) {
 		return -FailureReason_CannotDecodeMessage;
 	}
@@ -314,8 +324,8 @@ void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer)
 		case CanardTransferTypeResponse:
 			switch(transfer->data_type_id)
 			{
-				case KPLC_IOSTATE_ID:
-					handler = handle_KPLC_IOState_Response;
+				case KPLC_IOSTATEFRAME_ID:
+					handler = handle_KPLC_IOStateFrame_Response;
 					break;
 			}
 			break;
@@ -350,20 +360,39 @@ void ProcessIOStateTimerCallback(uint8_t _)
 	}
 }
 
-uint8_t sendIOState()
-{
-	uint8_t buffer[KPLC_IOSTATE_UINT8X7_REQUEST_MAX_SIZE];
+uint8_t sendDigitalInputsState(IOStateFrameIndex frameIndex) {
+	uint8_t frameIndexId = 0;
+	while(true) {
+		auto frameIndexCandidate = (IOStateFrameIndex)(1 << frameIndexId);
+		if (frameIndex == frameIndexCandidate) {
+			break;
+		}
+		frameIndexId++;
+		if(frameIndexCandidate == IOStateFrameIndex_Max) {
+			return -FailureReason_Other;
+		}
+	}
+	
+	uint8_t bufferOffset = frameIndexId * KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH;
+	uint8_t bufferLength = KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH;
+	if (bufferOffset + bufferLength >= InputsBufferLength) {
+		bufferLength = InputsBufferLength - bufferOffset;
+	}
+	
+	uint8_t buffer[KPLC_IOSTATEFRAME_REQUEST_MAX_SIZE];
 	static uint8_t transfer_id = 0;
 	
-	kplc_IOState_uint8x7Request request;
-	memcpy(request.state, g_ioState, InputsBufferLength);
+	kplc_IOStateFrameRequest request;
+	request.frameIndex = frameIndexId;
+	request.data.data = g_ioState + bufferOffset;
+	request.data.len = bufferLength;
 
-	uint16_t len = kplc_IOState_uint8x7Request_encode(&request, &buffer[0]);
+	uint16_t len = kplc_IOStateFrameRequest_encode(&request, &buffer[0]);
 	
 	int16_t result = canardRequestOrRespond(&g_canard,
 		MAIN_MODULE_NODE_ID,
-		KPLC_IOSTATE_UINT8X7_SIGNATURE,
-		KPLC_IOSTATE_UINT8X7_ID,
+		KPLC_IOSTATEFRAME_SIGNATURE,
+		KPLC_IOSTATEFRAME_ID,
 		&transfer_id,
 		CANARD_TRANSFER_PRIORITY_MEDIUM,
 		CanardRequest,
@@ -412,29 +441,30 @@ int8_t ProcessDigitalInputs(bool forced)
 	uint8_t diffIsBig = timeDiff >= IOSTATE_LPF_TIME_MS;
 	uint8_t smallDiff = (uint8_t)timeDiff;
 	
-	uint8_t resultUpdated = false;
+	IOStateFrameIndex resultUpdated = IOStateFrameIndex_None;
 	
 	for (int i = 0; i < InputsBufferLength; i++)
 	{
 		for (int j = 0; j < 8; j++)
 		{
 			uint8_t current_ij = current[i] & _BV(j);
+			uint8_t digitalInputIndex = i * 8 + j;
 			if ((g_ioStateStaging[i] & _BV(j)) != current_ij)
 			{
 				g_ioStateStaging[i] = (g_ioStateStaging[i] & ~_BV(j)) | current_ij;
 				
 				if ((result[i] & _BV(j)) == current_ij)
 				{
-					g_ioStateLpfTimeOffsets[i * 8 + j] = IOSTATE_LPF_TIME_OFFSET_UNSET;
+					g_ioStateLpfTimeOffsets[digitalInputIndex] = IOSTATE_LPF_TIME_OFFSET_UNSET;
 				}
 				else
 				{
-					g_ioStateLpfTimeOffsets[i * 8 + j] = 0;
+					g_ioStateLpfTimeOffsets[digitalInputIndex] = 0;
 				}
 			}
 			else
 			{
-				uint8_t timeOffset = g_ioStateLpfTimeOffsets[i * 8 + j];
+				uint8_t timeOffset = g_ioStateLpfTimeOffsets[digitalInputIndex];
 				if (timeOffset == IOSTATE_LPF_TIME_OFFSET_UNSET)
 				{
 					// Nothing to do.
@@ -442,27 +472,34 @@ int8_t ProcessDigitalInputs(bool forced)
 				else if (diffIsBig ||
 					smallDiff + timeOffset > IOSTATE_LPF_TIME_MS)
 				{
-					g_ioStateLpfTimeOffsets[i * 8 + j] = IOSTATE_LPF_TIME_OFFSET_UNSET;
+					g_ioStateLpfTimeOffsets[digitalInputIndex] = IOSTATE_LPF_TIME_OFFSET_UNSET;
 					result[i] = (g_ioStateStaging[i] & ~_BV(j)) | current_ij;
-					resultUpdated = true;
+					resultUpdated = (IOStateFrameIndex)(resultUpdated | getFrameIndex(digitalInputIndex));
 				}
 				else
 				{
-					g_ioStateLpfTimeOffsets[i * 8 + j] = smallDiff + timeOffset;
+					g_ioStateLpfTimeOffsets[digitalInputIndex] = smallDiff + timeOffset;
 				}
 			}
 		}
 	}
 	
-	if (forced || resultUpdated)
-	{
-		memcpy(&g_ioState[0], &result[0], sizeof(g_ioState));		
-		int8_t ret = sendIOState();
-		if (ret < 0)
-		{
-			return ret;
-		}
+	if (forced) {
+		resultUpdated = IOStateFrameIndex_All;
 	}
+	
+	if (resultUpdated) {
+		memcpy(&g_ioState[0], &result[0], sizeof(g_ioState));
+		
+		for (IOStateFrameIndex i = IOStateFrameIndex_0; i <= IOStateFrameIndex_Max;	i = (IOStateFrameIndex)(i << 1)) {
+			if (resultUpdated & i) {
+				int8_t ret = sendDigitalInputsState(i);
+				if (ret < 0) {
+					return ret;
+				}
+			}
+		}
+	}	
 	
 	return 0;
 }
