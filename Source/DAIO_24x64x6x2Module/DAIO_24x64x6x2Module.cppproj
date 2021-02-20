@@ -315,21 +315,13 @@
       <SubType>compile</SubType>
       <Link>dsdl\kplc\kplc_IOState.c</Link>
     </Compile>
-    <Compile Include="..\Shared\dsdl\kplc\IOState_float16x2.h">
+    <Compile Include="..\Shared\dsdl\kplc\IOStateFrame.h">
       <SubType>compile</SubType>
-      <Link>dsdl\kplc\IOState_float16x2.h</Link>
+      <Link>dsdl\kplc\IOStateFrame.h</Link>
     </Compile>
-    <Compile Include="..\Shared\dsdl\kplc\kplc_IOState_float16x2.c">
+    <Compile Include="..\Shared\dsdl\kplc\kplc_IOStateFrame.c">
       <SubType>compile</SubType>
-      <Link>dsdl\kplc\kplc_IOState_float16x2.c</Link>
-    </Compile>
-    <Compile Include="..\Shared\dsdl\kplc\IOState_uint8x7.h">
-      <SubType>compile</SubType>
-      <Link>dsdl\kplc\IOState_uint8x7.h</Link>
-    </Compile>
-    <Compile Include="..\Shared\dsdl\kplc\kplc_IOState_uint8x7.c">
-      <SubType>compile</SubType>
-      <Link>dsdl\kplc\kplc_IOState_uint8x7.c</Link>
+      <Link>dsdl\kplc\kplc_IOStateFrame.c</Link>
     </Compile>
     <Compile Include="..\Shared\dsdl\uavcan\protocol\AccessCommandShell.h">
       <SubType>compile</SubType>
@@ -513,7 +505,7 @@
     <Folder Include="Arduino\" />
     <Folder Include="avr-can-lib\" />
     <Folder Include="canard\" />
-    <Folder Include="Timer\" />
+    <Folder Include="Timer\" /> 
   </ItemGroup>
   <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets" />
 </Project>
