@@ -494,6 +494,12 @@
     <Compile Include="can_config.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="inputs.cpp">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="inputs.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="main.cpp">
       <SubType>compile</SubType>
     </Compile>
@@ -505,7 +511,13 @@
     <Folder Include="Arduino\" />
     <Folder Include="avr-can-lib\" />
     <Folder Include="canard\" />
-    <Folder Include="Timer\" /> 
+    <Folder Include="dsdl\" />
+    <Folder Include="dsdl\kplc\" />
+    <Folder Include="dsdl\uavcan\" />
+    <Folder Include="dsdl\uavcan\protocol\" />
+    <Folder Include="dsdl\uavcan\protocol\debug\" />
+    <Folder Include="dsdl\uavcan\protocol\param\" />
+    <Folder Include="Timer\" />
   </ItemGroup>
   <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets" />
 </Project>
