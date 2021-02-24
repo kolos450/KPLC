@@ -2,24 +2,10 @@
 
 #define IOSTATE_LPF_TIME_OFFSET_UNSET 0xFF
 #define IOSTATE_LPF_TIME_MS 20
-constexpr int InputsCount = 64;
-constexpr int InputsBufferLength = InputsCount / 8;
-static uint8_t g_ioState[InputsBufferLength];
-static uint8_t g_ioStateStaging[InputsBufferLength];
-static uint8_t g_ioStateLpfTimeOffsets[InputsCount];
-static uint32_t g_ioStateLpfTimeReference = 0;
-
-enum IOStateFrameIndex : uint8_t {
-	IOStateFrameIndex_None = 0,
-	IOStateFrameIndex_0 = 1 << 0,
-	IOStateFrameIndex_1 = 1 << 1,
-	IOStateFrameIndex_Max = IOStateFrameIndex_1,
-	IOStateFrameIndex_All = IOStateFrameIndex_0 | IOStateFrameIndex_1,
-};
-
-IOStateFrameIndex getFrameIndex(uint8_t digitalInputIndex) {
-	return (IOStateFrameIndex)(1 << (digitalInputIndex / 8 / KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH));
-}
+constexpr uint8_t DigitalInputsCount = 64;
+constexpr uint8_t DigitalInputsBytes = (DigitalInputsCount + 7) / 8;
+constexpr uint8_t AnalogInputsCount = 2;
+constexpr uint8_t InputsBufferLength = DigitalInputsBytes + AnalogInputsCount;
 
 int8_t handle_KPLC_IOStateFrame_Response(CanardRxTransfer* transfer)
 {
@@ -37,44 +23,26 @@ int8_t handle_KPLC_IOStateFrame_Response(CanardRxTransfer* transfer)
 	return 0;
 }
 
-uint8_t sendDigitalInputsState(IOStateFrameIndex frameIndex) {
-	uint8_t frameIndexId = 0;
-	while(true) {
-		auto frameIndexCandidate = (IOStateFrameIndex)(1 << frameIndexId);
-		if (frameIndex == frameIndexCandidate) {
-			break;
-		}
-		frameIndexId++;
-		if(frameIndexCandidate == IOStateFrameIndex_Max) {
-			return -FailureReason_Other;
-		}
-	}
-	
-	uint8_t bufferOffset = frameIndexId * KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH;
-	uint8_t bufferLength = KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH;
-	if (bufferOffset + bufferLength >= InputsBufferLength) {
-		bufferLength = InputsBufferLength - bufferOffset;
-	}
-	
+int8_t sendFrame(uint8_t frameIndex, uint8_t* data, uint8_t length) {	
 	uint8_t buffer[KPLC_IOSTATEFRAME_REQUEST_MAX_SIZE];
 	static uint8_t transfer_id = 0;
 	
 	kplc_IOStateFrameRequest request;
-	request.frameIndex = frameIndexId;
-	request.data.data = g_ioState + bufferOffset;
-	request.data.len = bufferLength;
+	request.frameIndex = frameIndex;
+	request.data.data = data;
+	request.data.len = length;
 
 	uint16_t len = kplc_IOStateFrameRequest_encode(&request, &buffer[0]);
 	
 	int16_t result = canardRequestOrRespond(&g_canard,
-	MAIN_MODULE_NODE_ID,
-	KPLC_IOSTATEFRAME_SIGNATURE,
-	KPLC_IOSTATEFRAME_ID,
-	&transfer_id,
-	CANARD_TRANSFER_PRIORITY_MEDIUM,
-	CanardRequest,
-	&buffer[0],
-	(uint16_t)len);
+		MAIN_MODULE_NODE_ID,
+		KPLC_IOSTATEFRAME_SIGNATURE,
+		KPLC_IOSTATEFRAME_ID,
+		&transfer_id,
+		CANARD_TRANSFER_PRIORITY_MEDIUM,
+		CanardRequest,
+		&buffer[0],
+		(uint16_t)len);
 	
 	if (result < 0) {
 		return (int8_t)result;
@@ -83,17 +51,9 @@ uint8_t sendDigitalInputsState(IOStateFrameIndex frameIndex) {
 	return 0;
 }
 
-uint8_t reverse(uint8_t b)
+int8_t FetchDigitalInputs(uint8_t* buffer)
 {
-	b = (b & 0xF0) >> 4 | (b & 0x0F) << 4;
-	b = (b & 0xCC) >> 2 | (b & 0x33) << 2;
-	b = (b & 0xAA) >> 1 | (b & 0x55) << 1;
-	return b;
-}
-
-void FetchInputs(uint8_t* buffer)
-{
-	for (int i = 0; i < 7; i++)
+	for (uint8_t i = 0; i < 7; i++)
 	{
 		PORTD = _BV(i);
 		DDRD = _BV(i);
@@ -102,15 +62,15 @@ void FetchInputs(uint8_t* buffer)
 	
 	DDRD = 0;
 	PORTD = 0;
+	
+	return 0;
 }
 
-int8_t ProcessDigitalInputs(bool forced)
+int8_t DigitalLowPassFilter(uint8_t* data, uint8_t const * previousData)
 {
-	uint8_t current[InputsBufferLength];
-	FetchInputs(&current[0]);
-	
-	uint8_t result[InputsBufferLength];
-	memcpy(&result[0], &g_ioState[0], sizeof(g_ioState));
+	static uint8_t g_ioStateStaging[DigitalInputsBytes] = { 0 };
+	static uint8_t g_ioStateLpfTimeOffsets[DigitalInputsCount] = { 0 };
+	static uint32_t g_ioStateLpfTimeReference = 0;
 	
 	uint32_t now = millis();
 	uint32_t timeDiff = now - g_ioStateLpfTimeReference;
@@ -118,19 +78,24 @@ int8_t ProcessDigitalInputs(bool forced)
 	uint8_t diffIsBig = timeDiff >= IOSTATE_LPF_TIME_MS;
 	uint8_t smallDiff = (uint8_t)timeDiff;
 	
-	IOStateFrameIndex resultUpdated = IOStateFrameIndex_None;
+	int8_t ret = 0;
 	
-	for (int i = 0; i < InputsBufferLength; i++)
+	for (int i = 0; i < DigitalInputsBytes; i++)
 	{
 		for (int j = 0; j < 8; j++)
 		{
-			uint8_t current_ij = current[i] & _BV(j);
+			uint8_t current_ij = data[i] & _BV(j);
+			uint8_t previous_ij = previousData[i] & _BV(j);
+			if (current_ij != previous_ij) {
+				data[i] = (data[i] & ~_BV(j)) | previous_ij;
+			}
+			
 			uint8_t digitalInputIndex = i * 8 + j;
 			if ((g_ioStateStaging[i] & _BV(j)) != current_ij)
 			{
 				g_ioStateStaging[i] = (g_ioStateStaging[i] & ~_BV(j)) | current_ij;
 				
-				if ((result[i] & _BV(j)) == current_ij)
+				if (previous_ij == current_ij)
 				{
 					g_ioStateLpfTimeOffsets[digitalInputIndex] = IOSTATE_LPF_TIME_OFFSET_UNSET;
 				}
@@ -147,11 +112,11 @@ int8_t ProcessDigitalInputs(bool forced)
 					// Nothing to do.
 				}
 				else if (diffIsBig ||
-				smallDiff + timeOffset > IOSTATE_LPF_TIME_MS)
+					smallDiff + timeOffset > IOSTATE_LPF_TIME_MS)
 				{
 					g_ioStateLpfTimeOffsets[digitalInputIndex] = IOSTATE_LPF_TIME_OFFSET_UNSET;
-					result[i] = (g_ioStateStaging[i] & ~_BV(j)) | current_ij;
-					resultUpdated = (IOStateFrameIndex)(resultUpdated | getFrameIndex(digitalInputIndex));
+					data[i] = (g_ioStateStaging[i] & ~_BV(j)) | current_ij;
+					ret = 1;
 				}
 				else
 				{
@@ -161,49 +126,103 @@ int8_t ProcessDigitalInputs(bool forced)
 		}
 	}
 	
-	if (forced) {
-		resultUpdated = IOStateFrameIndex_All;
-	}
+	return ret;
+}
+
+int8_t AnalogLowPassFilter(uint8_t* data, uint8_t const * previousData)
+{
+	static uint8_t g_ioStateStaging[AnalogInputsCount] = { 0 };
+	static uint8_t g_ioStateLpfTimeOffsets[AnalogInputsCount] = { 0 };
+	static uint32_t g_ioStateLpfTimeReference = 0;
 	
-	if (resultUpdated) {
-		memcpy(&g_ioState[0], &result[0], sizeof(g_ioState));
+	uint32_t now = millis();
+	uint32_t timeDiff = now - g_ioStateLpfTimeReference;
+	g_ioStateLpfTimeReference = now;
+	uint8_t diffIsBig = timeDiff >= IOSTATE_LPF_TIME_MS;
+	uint8_t smallDiff = (uint8_t)timeDiff;
+	
+	int8_t ret = 0;
+	
+	for (int i = 0; i < AnalogInputsCount; i++)
+	{
+		uint8_t current = data[i];
+		uint8_t previous = previousData[i];
+		if (current != previous) {
+			data[i] = previous;
+		}
 		
-		for (IOStateFrameIndex i = IOStateFrameIndex_0; i <= IOStateFrameIndex_Max;	i = (IOStateFrameIndex)(i << 1)) {
-			if (resultUpdated & i) {
-				int8_t ret = sendDigitalInputsState(i);
-				if (ret < 0) {
-					return ret;
-				}
+		if ((g_ioStateStaging[i]) != current)
+		{
+			g_ioStateStaging[i] = current;
+				
+			if (previous == current)
+			{
+				g_ioStateLpfTimeOffsets[i] = IOSTATE_LPF_TIME_OFFSET_UNSET;
+			}
+			else
+			{
+				g_ioStateLpfTimeOffsets[i] = 0;
+			}
+		}
+		else
+		{
+			uint8_t timeOffset = g_ioStateLpfTimeOffsets[i];
+			if (timeOffset == IOSTATE_LPF_TIME_OFFSET_UNSET)
+			{
+				// Nothing to do.
+			}
+			else if (diffIsBig ||
+				smallDiff + timeOffset > IOSTATE_LPF_TIME_MS)
+			{
+				g_ioStateLpfTimeOffsets[i] = IOSTATE_LPF_TIME_OFFSET_UNSET;
+				data[i] = current;
+				ret = 1;
+			}
+			else
+			{
+				g_ioStateLpfTimeOffsets[i] = smallDiff + timeOffset;
 			}
 		}
 	}
 	
+	return ret;
+}
+
+int8_t SetupAnalogChannel(uint8_t channel) {
+	auto admux = ADMUX & ~(_BV(MUX0) | _BV(MUX1) | _BV(MUX2) | _BV(MUX3) | _BV(MUX4));
+	switch (channel)
+	{
+		case 0:
+		{
+			break;
+		}
+		case 1:
+		{
+			admux |= _BV(MUX0);
+			break;
+		}
+		default:
+		{
+			return -1;
+		}
+	}
+	
+	ADMUX = admux;
+	
 	return 0;
 }
 
-constexpr uint8_t AdcCount = 2;
-static uint8_t g_adcValues[AdcCount];
-
-uint8_t LowPassFilterAnalogInput(uint8_t channel, uint8_t value)
-{
-	if (g_adcValues[channel] != value)
-	{
-		g_adcValues[channel] = value;
-		return true;
+int8_t NextAnalogChannel(uint8_t channel) {
+	channel++;
+	if(channel == AnalogInputsCount) {
+		channel = 0;
 	}
-	
-	return false;
+	return channel;
 }
 
-uint8_t SendAnalogInputs()
-{
-	// TODO
-	return -1;
-}
-
-uint8_t ProcessAnalogInputs(bool forced)
-{
+int8_t FetchAnalogInputs(uint8_t* buffer) {
 	static uint8_t adcChannel = 0xFF;
+	static uint8_t adcBuffer[AnalogInputsCount] = { 0 };
 	
 	if (adcChannel == 0xFF)
 	{
@@ -216,31 +235,37 @@ uint8_t ProcessAnalogInputs(bool forced)
 		// ADSC is cleared when the conversion finishes.
 		if (ADCSRA & _BV(ADSC))
 		{
-			uint8_t adcValue = ADCH; // 8 bits, 0 to 255.
-			
-			if (LowPassFilterAnalogInput(adcChannel, adcValue))
-			{
-				auto result = SendAnalogInputs();
-				if (result < 0) {
-					return result;
-				}
-			}
+			adcBuffer[adcChannel] = ADCH; // 8 bits, 0 to 255.
 			
 			// Setup the next channel.
-			adcChannel = 1 - adcChannel;
-			auto admux = ADMUX & ~(_BV(MUX0) | _BV(MUX1) | _BV(MUX2) | _BV(MUX3) | _BV(MUX4));
-			switch (adcChannel)
-			{
-				case 0:
-				break;
-				case 1:
-				admux |= _BV(MUX0);
-				break;
+			adcChannel = NextAnalogChannel(adcChannel);
+			int8_t ret = SetupAnalogChannel(adcChannel);
+			if (ret < 0) {
+				return ret;
 			}
-			ADMUX = admux;
 			
 			// Start the conversion.
 			ADCSRA |= _BV(ADSC);
+		}
+	}
+	
+	memcpy(buffer, &adcBuffer, AnalogInputsCount);
+	
+	return 0;
+}
+
+int8_t SendData(uint8_t* current, uint8_t* previous, bool forced) {
+	uint8_t frameIndex = 0;
+	for (uint8_t i = 0; i < InputsBufferLength; i+= KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH, frameIndex++) {
+		if (forced || memcmp(current + i, previous + i, KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH)) {
+			uint8_t length = KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH;
+			if (i + length > InputsBufferLength) {
+				length = InputsBufferLength - i;
+			}
+			int8_t ret = sendFrame(frameIndex, current, length);
+			if (ret < 0) {
+				return ret;
+			}
 		}
 	}
 	
@@ -249,29 +274,46 @@ uint8_t ProcessAnalogInputs(bool forced)
 
 int8_t ProcessInputs(bool forced)
 {
-	uint8_t ret;
+	static uint8_t data[InputsBufferLength];
+	uint8_t current[InputsBufferLength];
 	
-	ret = ProcessDigitalInputs(forced);
+	int8_t ret;
+	
+	ret = FetchDigitalInputs(current);
 	if (ret < 0) return ret;
 	
-	ret = ProcessAnalogInputs(forced);
+	ret = FetchAnalogInputs(current + DigitalInputsBytes);
+	if (ret < 0) return ret;
 	
-	return ret;
+	ret = DigitalLowPassFilter(current, data);
+	if (ret < 0) return ret;
+	
+	bool hasChanges = ret == 1;
+	
+	ret = AnalogLowPassFilter(current + DigitalInputsBytes, data + DigitalInputsBytes);
+	if (ret < 0) return ret;
+	
+	if (ret == 1) {
+		hasChanges = true;
+	}
+	
+	if (hasChanges || forced) {
+		 ret = SendData(current, data, forced);
+		 if (ret < 0) return ret;
+		 
+		 memcpy(data, current, InputsBufferLength);
+	}
+	
+	return 0;
 }
 
 uint8_t InitializeInputs()
-{
-	memset(&g_ioStateLpfTimeOffsets, IOSTATE_LPF_TIME_OFFSET_UNSET, sizeof(g_ioStateLpfTimeOffsets));
-	memset(&g_ioState, 0, sizeof(g_ioState));
-	memset(&g_ioStateStaging, 0, sizeof(g_ioStateStaging));
-	
-	memset(&g_adcValues, 0, AdcCount);
-	
+{	
 	ADMUX |=
-	_BV(ADLAR); // ADC Left Adjust Result.
+		_BV(ADLAR); // ADC Left Adjust Result.
 	ADCSRA |=
-	_BV(ADEN) | // Enable ADC.
-	_BV(ADPS1); // Division factor = 4.
+		_BV(ADEN) | // Enable ADC.
+		_BV(ADPS1); // Division factor = 4.
 	
 	return 0;
 }
