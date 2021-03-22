@@ -23,7 +23,7 @@ extern "C"
 #
 
 uint8 frameIndex
-uint8[<=6] data
+uint8[<=5] data
 
 ---
 
@@ -37,20 +37,20 @@ uint8 status
 /********************* DSDL signature source definition ***********************
 kplc.IOStateFrame
 saturated uint8 frameIndex
-saturated uint8[<=6] data
+saturated uint8[<=5] data
 ---
 saturated uint8 status
 ******************************************************************************/
 
 #define KPLC_IOSTATEFRAME_ID                               202
 #define KPLC_IOSTATEFRAME_NAME                             "kplc.IOStateFrame"
-#define KPLC_IOSTATEFRAME_SIGNATURE                        (0xDC67FCF04B9729CDULL)
+#define KPLC_IOSTATEFRAME_SIGNATURE                        (0xAA2AB603B8846BDDULL)
 
-#define KPLC_IOSTATEFRAME_REQUEST_MAX_SIZE                 ((59 + 7)/8)
+#define KPLC_IOSTATEFRAME_REQUEST_MAX_SIZE                 ((51 + 7)/8)
 
 // Constants
 
-#define KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH                                        6
+#define KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH                                        5
 
 typedef struct
 {
@@ -59,7 +59,7 @@ typedef struct
     struct
     {
         uint8_t    len;                       // Dynamic array length
-        uint8_t*   data;                      // Dynamic Array 8bit[6] max items
+        uint8_t*   data;                      // Dynamic Array 8bit[5] max items
     } data;
 
 } kplc_IOStateFrameRequest;
