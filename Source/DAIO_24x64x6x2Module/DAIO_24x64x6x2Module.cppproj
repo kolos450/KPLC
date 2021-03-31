@@ -29,14 +29,14 @@
     <eraseonlaunchrule>0</eraseonlaunchrule>
     <EraseKey />
     <AsfFrameworkConfig>
-      <framework-data xmlns="">
+      <framework-data>
         <options />
         <configurations />
         <files />
         <documentation help="" />
         <offline-documentation help="" />
         <dependencies>
-          <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.40.0" />
+          <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.42.0" />
         </dependencies>
       </framework-data>
     </AsfFrameworkConfig>
@@ -306,14 +306,6 @@
     <Compile Include="..\Shared\Timer\Timer.h">
       <SubType>compile</SubType>
       <Link>Timer\Timer.h</Link>
-    </Compile>
-    <Compile Include="..\Shared\dsdl\kplc\IOState.h">
-      <SubType>compile</SubType>
-      <Link>dsdl\kplc\IOState.h</Link>
-    </Compile>
-    <Compile Include="..\Shared\dsdl\kplc\kplc_IOState.c">
-      <SubType>compile</SubType>
-      <Link>dsdl\kplc\kplc_IOState.c</Link>
     </Compile>
     <Compile Include="..\Shared\dsdl\kplc\IOStateFrame.h">
       <SubType>compile</SubType>

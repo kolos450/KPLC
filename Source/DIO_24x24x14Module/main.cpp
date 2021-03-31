@@ -10,7 +10,7 @@
 #include "MCP23S17/MCP23S17.h"
 #include "MCP23S17_config.h"
 
-#include "kplc/IOState.h"
+#include "kplc/IOStateFrame.h"
 #include "uavcan/protocol/GetNodeInfo.h"
 #include "uavcan/protocol/NodeStatus.h"
 #include "uavcan/protocol/Panic.h"
@@ -45,19 +45,6 @@ uint8_t readNodeId()
 	return val ^ 0x3F;
 }
 
-static int8_t ValidateIOStateRequest(kplc_IOStateRequest request)
-{
-	for (uint8_t i = 0; i < ARRAY_SIZE(request.state); i++)
-	{
-		uint8_t val = request.state[i];
-		uint8_t inv = ~val;
-		if (inv != request.state_inv[i])
-			return -FailureReason_CannotDecodeMessage;
-	}
-	
-	return 0;
-}
-
 static void ApplyIOState(uint8_t* state)
 {
 	uint8_t state_0 = state[0];
@@ -81,40 +68,37 @@ static void ApplyIOState(uint8_t* state)
 	MCP23S17_B.write(stateB);
 }
 
-static int8_t handle_KPLC_IOState_Request(CanardRxTransfer* transfer)
+static int8_t handle_KPLC_IOStateFrame_Request(CanardRxTransfer* transfer)
 {
 	if (transfer->source_node_id != MAIN_MODULE_NODE_ID) {
 		return 0;
 	}
 	
-	kplc_IOStateRequest request;
+	kplc_IOStateFrameRequest request;
 	int8_t ret;
-	uint8_t responseStatus = KPLC_IOSTATE_RESPONSE_STATUS_OK;
-	ret = kplc_IOStateRequest_decode(transfer, transfer->payload_len, &request, NULL);
+	uint8_t responseStatus = KPLC_IOSTATEFRAME_RESPONSE_STATUS_OK;
+	ret = kplc_IOStateFrameRequest_decode(transfer, transfer->payload_len, &request, NULL);
 	if (ret < 0) {
-		responseStatus = KPLC_IOSTATE_RESPONSE_STATUS_ERROR_UNKNOWN;
+		responseStatus = KPLC_IOSTATEFRAME_RESPONSE_STATUS_ERROR_UNKNOWN;
 		ret = -FailureReason_CannotDecodeMessage;
 	}
+	else if (request.frameIndex != 0 || request.data.len != 2) {
+		responseStatus = KPLC_IOSTATEFRAME_RESPONSE_STATUS_ERROR_INCONSISTENCY;
+	}
 	else {
-		ret = ValidateIOStateRequest(request);
-		if (ret < 0) {
-			responseStatus = KPLC_IOSTATE_RESPONSE_STATUS_ERROR_INCONSISTENCY;
-		}
-		else {
-			ApplyIOState(&request.state[0]);
-		}
+		ApplyIOState(request.data.data);
 	}
 	
-	uint8_t buffer[KPLC_IOSTATE_RESPONSE_MAX_SIZE];
+	uint8_t buffer[KPLC_IOSTATEFRAME_RESPONSE_MAX_SIZE];
 	memset(buffer, 0, sizeof(buffer));
-	kplc_IOStateResponse response = {
+	kplc_IOStateFrameResponse response = {
 		.status = responseStatus
 	};
-	uint16_t len = kplc_IOStateResponse_encode(&response, &buffer[0]);
+	uint16_t len = kplc_IOStateFrameResponse_encode(&response, &buffer[0]);
 	int16_t ret_int16 = canardRequestOrRespond(&g_canard,
 		transfer->source_node_id,
-		KPLC_IOSTATE_SIGNATURE,
-		KPLC_IOSTATE_ID,
+		KPLC_IOSTATEFRAME_SIGNATURE,
+		KPLC_IOSTATEFRAME_ID,
 		&transfer->transfer_id,
 		transfer->priority,
 		CanardResponse,
@@ -134,9 +118,9 @@ static int8_t handle_KPLC_IOState_Request(CanardRxTransfer* transfer)
 
 static int8_t handle_KPLC_IOState_Response(CanardRxTransfer* transfer)
 {
-	kplc_IOStateResponse response;
+	kplc_IOStateFrameResponse response;
 	int8_t ret;
-	ret = kplc_IOStateResponse_decode(transfer, transfer->payload_len, &response, NULL);
+	ret = kplc_IOStateFrameResponse_decode(transfer, transfer->payload_len, &response, NULL);
 	if (ret < 0) {
 		return -FailureReason_CannotDecodeMessage;
 	}
@@ -239,8 +223,8 @@ bool shouldAcceptTransfer(
 		case UAVCAN_PROTOCOL_NODESTATUS_ID:
 			*out_data_type_signature = UAVCAN_PROTOCOL_NODESTATUS_SIGNATURE;
 			return true;
-		case KPLC_IOSTATE_ID:
-			*out_data_type_signature = KPLC_IOSTATE_SIGNATURE;
+		case KPLC_IOSTATEFRAME_ID:
+			*out_data_type_signature = KPLC_IOSTATEFRAME_SIGNATURE;
 			return true;
 		case UAVCAN_PROTOCOL_PARAM_GETSET_ID:
 			*out_data_type_signature = UAVCAN_PROTOCOL_PARAM_GETSET_SIGNATURE;
@@ -270,8 +254,8 @@ void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer)
 				case UAVCAN_PROTOCOL_GETNODEINFO_ID:
 					handler = handle_protocol_GetNodeInfo;
 					break;
-				case KPLC_IOSTATE_ID:
-					handler = handle_KPLC_IOState_Request;
+				case KPLC_IOSTATEFRAME_ID:
+					handler = handle_KPLC_IOStateFrame_Request;
 					break;
 				case UAVCAN_PROTOCOL_PARAM_GETSET_ID:
 					handler = handle_protocol_param_GetSet;
@@ -281,7 +265,7 @@ void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer)
 		case CanardTransferTypeResponse:
 			switch(transfer->data_type_id)
 			{
-				case KPLC_IOSTATE_ID:
+				case KPLC_IOSTATEFRAME_ID:
 					handler = handle_KPLC_IOState_Response;
 					break;
 			}
@@ -344,23 +328,23 @@ int8_t setupMCP23S17()
 
 uint8_t sendIOState()
 {
-	uint8_t buffer[KPLC_IOSTATE_REQUEST_MAX_SIZE];
+	uint8_t buffer[KPLC_IOSTATEFRAME_REQUEST_MAX_SIZE];
 	static uint8_t transfer_id = 0;
 	
-	kplc_IOStateRequest request;
-	for (uint8_t i = 0; i < 3; i++)
-	{
-		uint8_t state = g_ioState[i];
-		request.state[i] = state;
-		request.state_inv[i] = ~state;
-	}
+	kplc_IOStateFrameRequest request = {
+		.frameIndex = 0,
+		.data = {
+			.len = sizeof(g_ioState),
+			.data = g_ioState
+		}
+	};
 
-	uint16_t len = kplc_IOStateRequest_encode(&request, &buffer[0]);
+	uint16_t len = kplc_IOStateFrameRequest_encode(&request, &buffer[0]);
 	
 	int16_t result = canardRequestOrRespond(&g_canard,
 		MAIN_MODULE_NODE_ID,
-		KPLC_IOSTATE_SIGNATURE,
-		KPLC_IOSTATE_ID,
+		KPLC_IOSTATEFRAME_SIGNATURE,
+		KPLC_IOSTATEFRAME_ID,
 		&transfer_id,
 		CANARD_TRANSFER_PRIORITY_MEDIUM,
 		CanardRequest,

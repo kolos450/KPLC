@@ -29,14 +29,14 @@
     <eraseonlaunchrule>0</eraseonlaunchrule>
     <EraseKey />
     <AsfFrameworkConfig>
-      <framework-data xmlns="">
+      <framework-data>
         <options />
         <configurations />
         <files />
         <documentation help="" />
         <offline-documentation help="" />
         <dependencies>
-          <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.40.0" />
+          <content-extension eid="atmel.asf" uuidref="Atmel.ASF" version="3.42.0" />
         </dependencies>
       </framework-data>
     </AsfFrameworkConfig>
@@ -307,13 +307,13 @@
       <SubType>compile</SubType>
       <Link>Timer\Timer.h</Link>
     </Compile>
-    <Compile Include="..\Shared\dsdl\kplc\IOState.h">
+    <Compile Include="..\Shared\dsdl\kplc\IOStateFrame.h">
       <SubType>compile</SubType>
-      <Link>dsdl\kplc\IOState.h</Link>
+      <Link>dsdl\kplc\IOStateFrame.h</Link>
     </Compile>
-    <Compile Include="..\Shared\dsdl\kplc\kplc_IOState.c">
+    <Compile Include="..\Shared\dsdl\kplc\kplc_IOStateFrame.c">
       <SubType>compile</SubType>
-      <Link>dsdl\kplc\kplc_IOState.c</Link>
+      <Link>dsdl\kplc\kplc_IOStateFrame.c</Link>
     </Compile>
     <Compile Include="..\Shared\dsdl\uavcan\protocol\AccessCommandShell.h">
       <SubType>compile</SubType>
@@ -497,6 +497,12 @@
     <Folder Include="Arduino\" />
     <Folder Include="avr-can-lib\" />
     <Folder Include="canard\" />
+    <Folder Include="dsdl\" />
+    <Folder Include="dsdl\kplc\" />
+    <Folder Include="dsdl\uavcan\" />
+    <Folder Include="dsdl\uavcan\protocol\" />
+    <Folder Include="dsdl\uavcan\protocol\debug\" />
+    <Folder Include="dsdl\uavcan\protocol\param\" />
     <Folder Include="Timer\" />
   </ItemGroup>
   <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets" />
