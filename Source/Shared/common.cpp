@@ -200,7 +200,6 @@ int8_t sendCanard(void)
 // REM: sizeof(CanardCANFrame) == 13
 #define RX_FRAME_BUFFER_LENGTH 16
 static CanardCANFrame rx_frame_buffer[RX_FRAME_BUFFER_LENGTH];
-static CanardCANFrame rx_frame_buffer_copy[RX_FRAME_BUFFER_LENGTH];
 static uint8_t rx_frame_buffer_count = 0;
 
 void handleCanRxInterrupt()
@@ -265,6 +264,7 @@ void receiveCanard(void)
 	
 	disableCanRxInterrupt();
 	uint8_t framesNum = rx_frame_buffer_count;
+	CanardCANFrame rx_frame_buffer_copy[RX_FRAME_BUFFER_LENGTH];
 	for (uint8_t i = 0; i < framesNum; i++)
 	{
 		rx_frame_buffer_copy[i] = rx_frame_buffer[i];

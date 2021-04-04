@@ -20,7 +20,7 @@
 #define IOSTATE_MIN_TRANSMIT_INTERVAL_MSEC 500
 
 CanardInstance g_canard;              // The canard library instance.
-uint8_t g_canard_memory_pool[1024];   // Arena for memory allocation, used by the library.
+uint8_t g_canard_memory_pool[CANARD_MEMORY_POOL_SIZE];   // Arena for memory allocation, used by the library.
 
 #define IOSTATE_LPF_TIME_OFFSET_UNSET 0xFF
 #define IOSTATE_LPF_TIME_MS 20
@@ -69,7 +69,9 @@ static int8_t handle_protocol_param_GetSet(CanardRxTransfer* transfer)
 	
 	int8_t ret;
 	uavcan_protocol_param_GetSetRequest request;
-	ret = uavcan_protocol_param_GetSetRequest_decode(transfer, transfer->payload_len, &request, NULL);
+	uint8_t dynamicArrayBuffer[UAVCAN_PROTOCOL_PARAM_GETSET_REQUEST_NAME_MAX_LENGTH];
+	uint8_t* dynamicArrayBufferPtr = dynamicArrayBuffer;
+	ret = uavcan_protocol_param_GetSetRequest_decode(transfer, transfer->payload_len, &request, &dynamicArrayBufferPtr);
 	if (ret < 0) {
 		return -FailureReason_CannotDecodeMessage;
 	}

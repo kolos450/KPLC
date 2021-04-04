@@ -15,6 +15,7 @@
 #include "uavcan/protocol/Panic.h"
 
 #define MAIN_MODULE_NODE_ID 100
+#define CANARD_MEMORY_POOL_SIZE 768
 
 enum NodeState
 {
@@ -75,7 +76,7 @@ extern NodeState g_nodeState;
 extern FailureReason g_failureReason;
 
 extern CanardInstance g_canard;              // The canard library instance.
-extern uint8_t g_canard_memory_pool[1024];   // Arena for memory allocation, used by the library.
+extern uint8_t g_canard_memory_pool[CANARD_MEMORY_POOL_SIZE];   // Arena for memory allocation, used by the library.
 
 extern Timer<4> g_timers;
 

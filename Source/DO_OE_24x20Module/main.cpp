@@ -14,7 +14,7 @@
 #include "uavcan/protocol/param/GetSet.h"
 
 CanardInstance g_canard;              // The canard library instance.
-uint8_t g_canard_memory_pool[1024];   // Arena for memory allocation, used by the library.
+uint8_t g_canard_memory_pool[CANARD_MEMORY_POOL_SIZE];   // Arena for memory allocation, used by the library.
 
 Timer<4> g_timers;
 
@@ -62,7 +62,10 @@ static int8_t handle_KPLC_IOStateFrame_Request(CanardRxTransfer* transfer)
 	kplc_IOStateFrameRequest request;
 	int8_t ret;
 	uint8_t responseStatus = KPLC_IOSTATEFRAME_RESPONSE_STATUS_OK;
-	ret = kplc_IOStateFrameRequest_decode(transfer, transfer->payload_len, &request, NULL);
+	
+	uint8_t dynamicArrayBuffer[KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH];
+	uint8_t* dynamicArrayBufferPtr = dynamicArrayBuffer;
+	ret = kplc_IOStateFrameRequest_decode(transfer, transfer->payload_len, &request, &dynamicArrayBufferPtr);
 	if (ret < 0) {
 		responseStatus = KPLC_IOSTATEFRAME_RESPONSE_STATUS_ERROR_UNKNOWN;
 		ret = -FailureReason_CannotDecodeMessage;
@@ -109,7 +112,9 @@ static int8_t handle_protocol_param_GetSet(CanardRxTransfer* transfer)
 	
 	int8_t ret;
 	uavcan_protocol_param_GetSetRequest request;
-	ret = uavcan_protocol_param_GetSetRequest_decode(transfer, transfer->payload_len, &request, NULL);
+	uint8_t dynamicArrayBuffer[UAVCAN_PROTOCOL_PARAM_GETSET_REQUEST_NAME_MAX_LENGTH];
+	uint8_t* dynamicArrayBufferPtr = dynamicArrayBuffer;
+	ret = uavcan_protocol_param_GetSetRequest_decode(transfer, transfer->payload_len, &request, &dynamicArrayBufferPtr);
 	if (ret < 0) {
 		return -FailureReason_CannotDecodeMessage;
 	}
