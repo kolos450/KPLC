@@ -39,6 +39,7 @@ uint8_t readNodeId()
 	PORTA |= _BV(PINA3) | _BV(PINA4);
 	// Make A2 low.	
 	DDRA |= _BV(PINA2);
+	delayMsWhileWdtReset(10);
 	// Read bit 1, bit 5.
 	if (!(PINA & _BV(PINA3))) result |= _BV(0);
 	if (!(PINA & _BV(PINA4))) result |= _BV(4);
@@ -51,6 +52,7 @@ uint8_t readNodeId()
 	PORTA |= _BV(PINA2) | _BV(PINA4);
 	// Make A3 low.
 	DDRA |= _BV(PINA3);
+	delayMsWhileWdtReset(10);
 	// Read bit 3, bit 2.
 	if (!(PINA & _BV(PINA2))) result |= _BV(2);
 	if (!(PINA & _BV(PINA4))) result |= _BV(1);
@@ -63,6 +65,7 @@ uint8_t readNodeId()
 	PORTA |= _BV(PINA2) | _BV(PINA3);
 	// Make A4 low.
 	DDRA |= _BV(PINA4);
+	delayMsWhileWdtReset(10);
 	// Read bit 6, bit 4.
 	if (!(PINA & _BV(PINA2))) result |= _BV(5);
 	if (!(PINA & _BV(PINA3))) result |= _BV(3);
@@ -346,13 +349,21 @@ int main(void)
 		_BV(PORTB3) /* MCP2515 Reset */ | _BV(PORTB4) /* MCP2515 CS, Led */ |
 		_BV(PORTB5) /* SPI MOSI */ | _BV(PORTB7) /* SPI SCK */;
 	
+	delayMsWhileWdtReset(500); // Wait for MCP2515 being initialized.
 	PORTB |= _BV(PORTB3); // MCP2515 Reset
+	
+	PORTB |= _BV(PORTB4);
 	
 	int8_t result;
 	
 	result = InitializeInputs();
 	if (result < 0) {
 		fail(result);
+	}
+	
+	result = g_timers.every(IOSTATE_MIN_TRANSMIT_INTERVAL_MSEC, ProcessIOStateTimerCallback);
+	if (result < 0) {
+		fail(-FailureReason_CannotInit);
 	}
 	
 	result = setup();

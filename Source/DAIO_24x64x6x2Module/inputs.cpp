@@ -53,10 +53,11 @@ int8_t sendFrame(uint8_t frameIndex, uint8_t* data, uint8_t length) {
 
 int8_t FetchDigitalInputs(uint8_t* buffer)
 {
-	for (uint8_t i = 0; i < 7; i++)
+	for (uint8_t i = 0; i < 8; i++)
 	{
 		PORTD = _BV(i);
 		DDRD = _BV(i);
+		_delay_ms(1);
 		buffer[i] = PINC;
 	}
 	
@@ -159,9 +160,12 @@ int8_t AnalogLowPassFilter(uint8_t* data, uint8_t const * previousData)
 			{
 				g_ioStateLpfTimeOffsets[i] = IOSTATE_LPF_TIME_OFFSET_UNSET;
 			}
-			else
+			else if (diffIsBig ||
+				smallDiff + g_ioStateLpfTimeOffsets[i] > IOSTATE_LPF_TIME_MS)
 			{
-				g_ioStateLpfTimeOffsets[i] = 0;
+				g_ioStateLpfTimeOffsets[i] = IOSTATE_LPF_TIME_OFFSET_UNSET;
+				data[i] = current;
+				ret = 1;
 			}
 		}
 		else
@@ -227,13 +231,14 @@ int8_t FetchAnalogInputs(uint8_t* buffer) {
 	if (adcChannel == 0xFF)
 	{
 		adcChannel = 0;
+		SetupAnalogChannel(adcChannel);
 		// Start the conversion.
 		ADCSRA |= _BV(ADSC);
 	}
 	else
 	{
 		// ADSC is cleared when the conversion finishes.
-		if (ADCSRA & _BV(ADSC))
+		if (!(ADCSRA & _BV(ADSC)))
 		{
 			adcBuffer[adcChannel] = ADCH; // 8 bits, 0 to 255.
 			
@@ -257,12 +262,13 @@ int8_t FetchAnalogInputs(uint8_t* buffer) {
 int8_t SendData(uint8_t* current, uint8_t* previous, bool forced) {
 	uint8_t frameIndex = 0;
 	for (uint8_t i = 0; i < InputsBufferLength; i+= KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH, frameIndex++) {
-		if (forced || memcmp(current + i, previous + i, KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH)) {
-			uint8_t length = KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH;
-			if (i + length > InputsBufferLength) {
-				length = InputsBufferLength - i;
-			}
-			int8_t ret = sendFrame(frameIndex, current, length);
+		auto length = InputsBufferLength - i;
+		if (length > KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH) {
+			length = KPLC_IOSTATEFRAME_REQUEST_DATA_MAX_LENGTH;
+		}
+		
+		if (forced || memcmp(current + i, previous + i, length)) {
+			int8_t ret = sendFrame(frameIndex, current + i, length);
 			if (ret < 0) {
 				return ret;
 			}
@@ -290,8 +296,8 @@ int8_t ProcessInputs(bool forced)
 	
 	bool hasChanges = ret == 1;
 	
-	ret = AnalogLowPassFilter(current + DigitalInputsBytes, data + DigitalInputsBytes);
-	if (ret < 0) return ret;
+ 	ret = AnalogLowPassFilter(current + DigitalInputsBytes, data + DigitalInputsBytes);
+ 	if (ret < 0) return ret;
 	
 	if (ret == 1) {
 		hasChanges = true;
@@ -308,12 +314,14 @@ int8_t ProcessInputs(bool forced)
 }
 
 uint8_t InitializeInputs()
-{	
-	ADMUX |=
-		_BV(ADLAR); // ADC Left Adjust Result.
+{
+	DDRA &= ~(_BV(0) | _BV(1));
+	ADMUX =
+		_BV(ADLAR) | // ADC Left Adjust Result.
+		_BV(REFS0); // AVCC with external capacitor at AREF pin.
 	ADCSRA |=
 		_BV(ADEN) | // Enable ADC.
-		_BV(ADPS1); // Division factor = 4.
+		_BV(ADPS2) | _BV(ADPS1); // Division factor = 64.
 	
 	return 0;
 }
