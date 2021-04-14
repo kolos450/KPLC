@@ -22,8 +22,17 @@ uint8_t g_canard_memory_pool[CANARD_MEMORY_POOL_SIZE];   // Arena for memory all
 
 Timer<4> g_timers;
 
-uint8_t readNodeId()
-{
+bool readNodeIdElement(int channel) {
+	ADMUX = (ADMUX & ~0x7) | channel;
+	
+	ADCSRA |= _BV(ADSC);
+	while(ADCSRA & _BV(ADSC));
+	
+	const int voltageDrop = 0xFF / 5.0 * 0.8;
+	return ADCH > voltageDrop;
+}
+
+uint8_t readNodeId() {
 	// Charlieplexing.
 	// ID0 = PA2
 	// ID1 = PA3
@@ -37,12 +46,12 @@ uint8_t readNodeId()
 	
 	// Pull-up A3, A4.
 	PORTA |= _BV(PINA3) | _BV(PINA4);
-	// Make A2 low.	
+	// Make A2 low.
 	DDRA |= _BV(PINA2);
 	delayMsWhileWdtReset(10);
 	// Read bit 1, bit 5.
-	if (!(PINA & _BV(PINA3))) result |= _BV(0);
-	if (!(PINA & _BV(PINA4))) result |= _BV(4);
+	if (!readNodeIdElement(3)) result |= _BV(0);
+	if (!readNodeIdElement(4)) result |= _BV(4);
 	
 	// Reset.
 	DDRA &= ~(_BV(PINA2) | _BV(PINA3) | _BV(PINA4));
@@ -54,8 +63,8 @@ uint8_t readNodeId()
 	DDRA |= _BV(PINA3);
 	delayMsWhileWdtReset(10);
 	// Read bit 3, bit 2.
-	if (!(PINA & _BV(PINA2))) result |= _BV(2);
-	if (!(PINA & _BV(PINA4))) result |= _BV(1);
+	if (!readNodeIdElement(2)) result |= _BV(2);
+	if (!readNodeIdElement(4)) result |= _BV(1);
 	
 	// Reset.
 	DDRA &= ~(_BV(PINA2) | _BV(PINA3) | _BV(PINA4));
@@ -67,8 +76,8 @@ uint8_t readNodeId()
 	DDRA |= _BV(PINA4);
 	delayMsWhileWdtReset(10);
 	// Read bit 6, bit 4.
-	if (!(PINA & _BV(PINA2))) result |= _BV(5);
-	if (!(PINA & _BV(PINA3))) result |= _BV(3);
+	if (!readNodeIdElement(2)) result |= _BV(5);
+	if (!readNodeIdElement(3)) result |= _BV(3);
 	
 	// Reset.
 	DDRA &= ~(_BV(PINA2) | _BV(PINA3) | _BV(PINA4));
