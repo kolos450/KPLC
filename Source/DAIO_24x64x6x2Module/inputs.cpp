@@ -198,11 +198,11 @@ int8_t SetupAnalogChannel(uint8_t channel) {
 	{
 		case 0:
 		{
+			admux |= _BV(MUX0);
 			break;
 		}
 		case 1:
 		{
-			admux |= _BV(MUX0);
 			break;
 		}
 		default:
