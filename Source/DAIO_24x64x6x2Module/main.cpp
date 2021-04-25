@@ -324,8 +324,7 @@ int main(void)
 			{
 				result = validateTransceiverState();
 				if (result < 0) {
-					fail(result);
-					continue;
+					resetTransceiverState();
 				}
 				
 				result = sendCanard();
