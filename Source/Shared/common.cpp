@@ -6,6 +6,7 @@ uint8_t g_nodeStatusHealth = UAVCAN_PROTOCOL_NODESTATUS_HEALTH_OK;
 uint8_t g_nodeStatusMode = UAVCAN_PROTOCOL_NODESTATUS_MODE_INITIALIZATION;
 NodeState g_nodeState = NodeState_Initial;
 FailureReason g_failureReason;
+uint8_t g_disableTimeConstraints;
 
 static uavcan_protocol_NodeStatus makeNodeStatusMessage()
 {
@@ -357,18 +358,19 @@ static int8_t validateMasterNodeStatus(uavcan_protocol_NodeStatus status)
 
 void validateMasterNodeState()
 {
-	uint32_t now = millis();
+	if (!g_disableTimeConstraints) {
+		uint32_t now = millis();
 	
-	// TODO: decrease multiplier.
-	if ((now - g_mainModuleLastStatusUpdateTime) > 3 * CANARD_NODESTATUS_PERIOD_MSEC) {
-		uint32_t difference = now - g_mainModuleLastStatusUpdateTime;
-		char buffer[11];
-		itoa(difference, buffer, 10);
-		uint8_t len = strlen(buffer);
-		if (len > 4) {
-			len = 0; // Panic message length restrictions.
+		if ((now - g_mainModuleLastStatusUpdateTime) > 3 * CANARD_NODESTATUS_PERIOD_MSEC) {
+			uint32_t difference = now - g_mainModuleLastStatusUpdateTime;
+			char buffer[11];
+			itoa(difference, buffer, 10);
+			uint8_t len = strlen(buffer);
+			if (len > 4) {
+				len = 0; // Panic message length restrictions.
+			}
+			fail(-FailureReason_MasterStatusTimeoutOverflow, (uint8_t*)buffer, len);
 		}
-		fail(-FailureReason_MasterStatusTimeoutOverflow, (uint8_t*)buffer, len);
 	}
 }
 
@@ -390,6 +392,104 @@ int8_t handle_protocol_NodeStatus(CanardRxTransfer* transfer)
 	ret = validateMasterNodeStatus(status);
 	if (ret < 0) {
 		return ret;
+	}
+	
+	return 0;
+}
+
+int8_t handle_protocol_param_GetSet(CanardRxTransfer* transfer)
+{
+	if (transfer->source_node_id != MAIN_MODULE_NODE_ID) {
+		return 0;
+	}
+	
+	int8_t ret;
+	uavcan_protocol_param_GetSetRequest request;
+	uint8_t dynamicArrayBuffer[UAVCAN_PROTOCOL_PARAM_GETSET_REQUEST_NAME_MAX_LENGTH];
+	uint8_t* dynamicArrayBufferPtr = dynamicArrayBuffer;
+	ret = uavcan_protocol_param_GetSetRequest_decode(transfer, transfer->payload_len, &request, &dynamicArrayBufferPtr);
+	if (ret < 0) {
+		return -FailureReason_CannotDecodeMessage;
+	}
+	
+	ParamKind paramKind;
+	if (request.name.data && request.name.len) {
+		paramKind = parseParamKind((char*)request.name.data, request.name.len);
+		} else {
+		paramKind = (ParamKind)request.index;
+	}
+	
+	char paramName[ParamKind_Name_MaxLength + 1];
+	uavcan_protocol_param_GetSetResponse response;
+	
+	response.default_value.union_tag = UAVCAN_PROTOCOL_PARAM_VALUE_EMPTY;
+	response.min_value.union_tag = UAVCAN_PROTOCOL_PARAM_NUMERICVALUE_EMPTY;
+	response.max_value.union_tag = UAVCAN_PROTOCOL_PARAM_NUMERICVALUE_EMPTY;
+	
+	switch (paramKind)
+	{
+		case ParamKind_NodeState:
+		{
+			if (request.value.union_tag == UAVCAN_PROTOCOL_PARAM_VALUE_BOOLEAN_VALUE)
+			{
+				g_nodeState = (NodeState)request.value.boolean_value;
+			}
+			
+			const char* paramNamePgm = ParamKind_Names[paramKind];
+			int paramKindNameLen = strlen_P(paramNamePgm);
+			strcpy_P(&paramName[0], paramNamePgm);
+			
+			response.name.len = paramKindNameLen;
+			response.name.data = (uint8_t*)(&paramName[0]);
+			
+			response.value.union_tag = UAVCAN_PROTOCOL_PARAM_VALUE_BOOLEAN_VALUE;
+			response.value.boolean_value = g_nodeState;
+			
+			break;
+		}
+		
+		case ParamKind_DisableTimeConstraints:
+		{
+			if (request.value.union_tag == UAVCAN_PROTOCOL_PARAM_VALUE_BOOLEAN_VALUE)
+			{
+				g_disableTimeConstraints = (NodeState)request.value.boolean_value;
+			}
+			
+			const char* paramNamePgm = ParamKind_Names[paramKind];
+			int paramKindNameLen = strlen_P(paramNamePgm);
+			strcpy_P(&paramName[0], paramNamePgm);
+			
+			response.name.len = paramKindNameLen;
+			response.name.data = (uint8_t*)(&paramName[0]);
+			
+			response.value.union_tag = UAVCAN_PROTOCOL_PARAM_VALUE_BOOLEAN_VALUE;
+			response.value.boolean_value = g_disableTimeConstraints;
+			
+			break;
+		}
+		
+		default:
+		{
+			response.name.len = 0;
+			response.name.data = 0;
+		}
+	}
+	
+	uint8_t buffer[50]; // TODO
+	memset(buffer, 0, sizeof(buffer));
+	uint16_t len = uavcan_protocol_param_GetSetResponse_encode(&response, &buffer[0]);
+	
+	int16_t result = canardRequestOrRespond(&g_canard,
+	transfer->source_node_id,
+	UAVCAN_PROTOCOL_PARAM_GETSET_SIGNATURE,
+	UAVCAN_PROTOCOL_PARAM_GETSET_ID,
+	&transfer->transfer_id,
+	transfer->priority,
+	CanardResponse,
+	&buffer[0],
+	(uint16_t)len);
+	if (result < 0) {
+		return (int8_t)result;
 	}
 	
 	return 0;

@@ -13,6 +13,7 @@
 #include "uavcan/protocol/GetNodeInfo.h"
 #include "uavcan/protocol/NodeStatus.h"
 #include "uavcan/protocol/Panic.h"
+#include "uavcan/protocol/param/GetSet.h"
 
 #define MAIN_MODULE_NODE_ID 100
 #define CANARD_MEMORY_POOL_SIZE 768
@@ -27,16 +28,19 @@ enum NodeState
 enum ParamKind
 {
 	ParamKind_NodeState = 0,
+	ParamKind_DisableTimeConstraints = 1,
 	
-	ParamKind_Max = 0,
+	ParamKind_Max = 1,
 };
 
 const char ParamKind_NodeState_Name[] PROGMEM = "ModuleState";
-const uint8_t ParamKind_Name_MaxLength = 16;
+const char ParamKind_DisableTimeConstraints_Name[] PROGMEM = "DisableTimeConstraints";
+const uint8_t ParamKind_Name_MaxLength = 22;
 
 const char* const ParamKind_Names[] =
 {
 	ParamKind_NodeState_Name,
+	ParamKind_DisableTimeConstraints_Name,
 };
 
 ParamKind parseParamKind(char* name, int len);
@@ -74,6 +78,7 @@ extern uint8_t g_nodeStatusHealth;
 extern uint8_t g_nodeStatusMode;
 extern NodeState g_nodeState;
 extern FailureReason g_failureReason;
+extern uint8_t g_disableTimeConstraints;
 
 extern CanardInstance g_canard;              // The canard library instance.
 extern uint8_t g_canard_memory_pool[CANARD_MEMORY_POOL_SIZE];   // Arena for memory allocation, used by the library.
@@ -99,6 +104,7 @@ void onTransferReceived(CanardInstance* ins, CanardRxTransfer* transfer);
 
 int8_t handle_protocol_GetNodeInfo(CanardRxTransfer* transfer);
 int8_t handle_protocol_NodeStatus(CanardRxTransfer* transfer);
+int8_t handle_protocol_param_GetSet(CanardRxTransfer* transfer);
 
 void handleCanRxInterrupt();
 void enableCanRxInterrupt();
