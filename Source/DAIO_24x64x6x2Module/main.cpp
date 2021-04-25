@@ -269,6 +269,14 @@ void resetLed()
 	PORTB &= ~_BV(PORTB4);
 }
 
+void enableCanController() {
+	PORTB |= _BV(PORTB3);
+}
+
+void disableCanController() {
+	PORTB &= ~_BV(PORTB3);
+}
+
 int main(void)
 {	
 	wdt_enable(WDTO_250MS);
@@ -279,9 +287,6 @@ int main(void)
 		_BV(PORTB0) /* McOut4 */ | _BV(PORTB1) /* McOut3 */ |
 		_BV(PORTB3) /* MCP2515 Reset */ | _BV(PORTB4) /* MCP2515 CS, Led */ |
 		_BV(PORTB5) /* SPI MOSI */ | _BV(PORTB7) /* SPI SCK */;
-	
-	delayMsWhileWdtReset(500); // Wait for MCP2515 being initialized.
-	PORTB |= _BV(PORTB3); // MCP2515 Reset
 	
 	PORTB |= _BV(PORTB4);
 	
@@ -324,7 +329,7 @@ int main(void)
 			{
 				result = validateTransceiverState();
 				if (result < 0) {
-					resetTransceiverState();
+					resetCanController();
 				}
 				
 				result = sendCanard();

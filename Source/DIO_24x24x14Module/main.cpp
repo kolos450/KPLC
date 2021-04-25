@@ -393,13 +393,20 @@ void disableCanRxInterrupt()
 	EIMSK &= ~_BV(INT0);
 }
 
+void enableCanController() {
+	PORTB |= _BV(PORTB1);
+}
+
+void disableCanController() {
+	PORTB &= ~_BV(PORTB1);
+}
+
 int main(void)
 {	
 	wdt_enable(WDTO_250MS);
 	wdt_reset();
 	
 	DDRE |= _BV(PORTE1); // LED
-	DDRB |= _BV(PORTB1); // MCP2515 Reset
 	
 	// McOut[8..13]
 	DDRB |= _BV(PORTB0);
@@ -451,7 +458,7 @@ int main(void)
 			{
 				result = validateTransceiverState();
 				if (result < 0) {
-					resetTransceiverState();
+					resetCanController();
 				}
 				
 				result = sendCanard();

@@ -34,8 +34,8 @@ enum ParamKind
 };
 
 const char ParamKind_NodeState_Name[] PROGMEM = "ModuleState";
-const char ParamKind_DisableTimeConstraints_Name[] PROGMEM = "DisableTimeConstraints";
-const uint8_t ParamKind_Name_MaxLength = 22;
+const char ParamKind_DisableTimeConstraints_Name[] PROGMEM = "DTC";
+const uint8_t ParamKind_Name_MaxLength = 16;
 
 const char* const ParamKind_Names[] =
 {
@@ -90,6 +90,10 @@ typedef int8_t (*uavcanMessageHandler_t)(CanardRxTransfer* transfer);
 int8_t setup(void);
 void fail(int8_t reason, uint8_t* message = NULL, uint8_t message_length = 0);
 bool checkNodeHealth();
+
+int8_t resetCanController();
+void enableCanController();
+void disableCanController();
 
 int8_t sendCanard(void);
 void receiveCanard(void);

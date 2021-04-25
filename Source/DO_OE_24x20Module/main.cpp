@@ -211,6 +211,14 @@ void resetLed()
 	PORTB &= ~_BV(PORTB4);
 }
 
+void enableCanController() {
+	PORTB |= _BV(PORTB3);
+}
+
+void disableCanController() {
+	PORTB &= ~_BV(PORTB3);
+}
+
 int main(void)
 {
 	wdt_enable(WDTO_250MS);
@@ -222,7 +230,7 @@ int main(void)
 	DDRD = 0xFF;
 	
 	PORTA = _BV(PORTA0) | _BV(PORTA1) | _BV(PORTA2) | _BV(PORTA3);
-	PORTB |= _BV(PORTB0) | _BV(PORTB1) | _BV(PORTB3);
+	PORTB |= _BV(PORTB0) | _BV(PORTB1);
 	
 	int8_t result;
 	
@@ -253,7 +261,7 @@ int main(void)
 			{
 				result = validateTransceiverState();
 				if (result < 0) {
-					resetTransceiverState();
+					resetCanController();
 				}
 				
 				result = sendCanard();

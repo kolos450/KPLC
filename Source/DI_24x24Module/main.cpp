@@ -319,6 +319,14 @@ void disableCanRxInterrupt()
 	EIMSK &= ~_BV(INT0);
 }
 
+void enableCanController() {
+	PORTB |= _BV(PORTB1);
+}
+
+void disableCanController() {
+	PORTB &= ~_BV(PORTB1);
+}
+
 int main(void)
 {	
 	wdt_enable(WDTO_250MS);
@@ -327,7 +335,6 @@ int main(void)
 	DDRD |= _BV(PORTD6); // LED
 	DDRB |= _BV(PORTB1); // MCP2515 Reset
 	
-	PORTB |= _BV(PORTB1);
 	PORTC |= _BV(PORTC5);
 	PORTD |= _BV(PORTD0) | _BV(PORTD1) | _BV(PORTD3) | _BV(PORTD4);
 	PORTE |= _BV(PORTE0);
@@ -372,7 +379,7 @@ int main(void)
 			{
 				result = validateTransceiverState();
 				if (result < 0) {
-					resetTransceiverState();
+					resetCanController();
 				}
 				
 				result = sendCanard();

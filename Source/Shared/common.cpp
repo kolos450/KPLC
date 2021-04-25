@@ -133,6 +133,40 @@ static void canardCleanupStaleTransfersHandler(uint8_t timerId)
 	canardCleanupStaleTransfers(&g_canard, GET_MICROS);
 }
 
+int8_t initializeCanController()
+{
+	int8_t result = canardAVRInit(CAN_SPEED);
+	if (result) {
+		return -FailureReason_CannotInit;
+	}
+	
+	auto nodeId = canardGetLocalNodeID(&g_canard);
+	if (canardAVRConfigureAcceptanceFilters(nodeId) < 0) {
+		return -FailureReason_CannotInit;
+	}
+	
+	return 0;
+}
+
+int8_t resetCanController()
+{
+	disableCanRxInterrupt();
+	
+	disableCanController();
+	_delay_ms(1);
+	enableCanController();
+	_delay_ms(1);
+	
+	int8_t result = initializeCanController();
+	if (result < 0) {
+		return result;
+	}
+	
+	enableCanRxInterrupt();
+
+	return 0;
+}
+
 int8_t setup(void)
 {
 	int8_t result;
@@ -141,10 +175,8 @@ int8_t setup(void)
 	
 	disableCanRxInterrupt();
 	
-	result = canardAVRInit(CAN_SPEED);
-	if (result) {
-		return -FailureReason_CannotInit;
-	}
+	enableCanController();
+	_delay_ms(1);
 	
 	canardInit(
 		&g_canard,                         // Uninitialized library instance
@@ -155,12 +187,14 @@ int8_t setup(void)
 		NULL);
 		
 	uint8_t nodeId = readNodeId();
-	
 	canardSetLocalNodeID(&g_canard, nodeId);
 	
-	if (canardAVRConfigureAcceptanceFilters(nodeId) < 0) {
-		return -FailureReason_CannotInit;
+	result = initializeCanController();
+	if (result < 0) {
+		return result;
 	}
+	
+	enableCanRxInterrupt();
 	
 	result = g_timers.every(CANARD_NODESTATUS_PERIOD_MSEC, broadcastNodeStatus);
 	if (result < 0) {
@@ -415,7 +449,7 @@ int8_t handle_protocol_param_GetSet(CanardRxTransfer* transfer)
 	ParamKind paramKind;
 	if (request.name.data && request.name.len) {
 		paramKind = parseParamKind((char*)request.name.data, request.name.len);
-		} else {
+	} else {
 		paramKind = (ParamKind)request.index;
 	}
 	
