@@ -23,7 +23,7 @@ CanardInstance g_canard;              // The canard library instance.
 uint8_t g_canard_memory_pool[CANARD_MEMORY_POOL_SIZE];   // Arena for memory allocation, used by the library.
 
 #define IOSTATE_LPF_TIME_OFFSET_UNSET 0xFF
-#define IOSTATE_LPF_TIME_MS 20
+#define IOSTATE_LPF_TIME_MS 10
 static uint8_t g_ioState[3];
 static uint8_t g_ioStateStaging[3];
 static uint8_t g_ioStateLpfTimeOffsets[8 * 3];

@@ -1,7 +1,7 @@
 #include "inputs.h"
 
 #define IOSTATE_LPF_TIME_OFFSET_UNSET 0xFF
-#define IOSTATE_LPF_TIME_MS 20
+#define IOSTATE_LPF_TIME_MS 10
 constexpr uint8_t DigitalInputsCount = 64;
 constexpr uint8_t DigitalInputsBytes = (DigitalInputsCount + 7) / 8;
 constexpr uint8_t AnalogInputsCount = 2;
